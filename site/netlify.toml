@@ -1,0 +1,10 @@
+# Site estático: nada para compilar, o Netlify só publica a pasta.
+[build]
+  publish = "."
+  command = ""
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "SAMEORIGIN"
+    X-Content-Type-Options = "nosniff"
