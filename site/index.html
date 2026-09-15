@@ -3904,8 +3904,9 @@ function ligarFormulario(){
 
 (async () => {
   ligarFormulario();
-  /* link de recuperação: o Supabase devolve o tipo no fragmento da URL */
-  if(/type=recovery/.test(location.hash)){
+  /* link de recuperação ou de convite: o Supabase devolve o tipo no fragmento da URL.
+     Nos dois casos a pessoa precisa escolher a senha antes de entrar. */
+  if(/type=(recovery|invite)/.test(location.hash)){
     await sb.auth.getSession();
     return telaNovaSenha();
   }
