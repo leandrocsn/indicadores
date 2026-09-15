@@ -1,0 +1,5 @@
+# Configuração do site no Netlify.
+# IMPORTANTE: este arquivo tem de ficar na RAIZ do repositório, não dentro de site/.
+[build]
+  publish = "site"
+  functions = "netlify/functions"
