@@ -7,13 +7,13 @@
 const URL_SB    = process.env.SUPABASE_URL;
 const SEGREDO   = process.env.SUPABASE_SERVICE_KEY;
 const PAPEIS_OK = ["admin", "gestao", "consulta"];
-
+ 
 const resposta = (codigo, corpo) => ({
   statusCode: codigo,
   headers: {"Content-Type": "application/json; charset=utf-8"},
   body: JSON.stringify(corpo)
 });
-
+ 
 const adm = (caminho, opcoes = {}) => fetch(URL_SB + caminho, {
   ...opcoes,
   headers: {
@@ -23,7 +23,7 @@ const adm = (caminho, opcoes = {}) => fetch(URL_SB + caminho, {
     ...(opcoes.headers || {})
   }
 });
-
+ 
 /* senha provisória legível, para quando o convite por e-mail não servir */
 function senhaProvisoria(){
   const letras = "abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -31,41 +31,41 @@ function senhaProvisoria(){
   for(let i = 0; i < 12; i++) s += letras[Math.floor(Math.random() * letras.length)];
   return s;
 }
-
+ 
 exports.handler = async (evento) => {
   if(evento.httpMethod !== "POST") return resposta(405, {erro: "método não permitido"});
   if(!URL_SB || !SEGREDO) return resposta(500, {erro: "o servidor não está configurado (faltam as variáveis de ambiente)"});
-
+ 
   /* ---------- quem está pedindo? ---------- */
   const cab = evento.headers.authorization || evento.headers.Authorization || "";
   const token = cab.replace(/^Bearer\s+/i, "").trim();
   if(!token) return resposta(401, {erro: "sessão não enviada"});
-
+ 
   const rUser = await fetch(URL_SB + "/auth/v1/user", {
     headers: {apikey: SEGREDO, Authorization: "Bearer " + token}
   });
   if(!rUser.ok) return resposta(401, {erro: "sessão inválida ou expirada"});
   const usuario = await rUser.json();
-
+ 
   /* ---------- essa pessoa é administradora? ---------- */
   const rPerfil = await adm(`/rest/v1/perfis?user_id=eq.${usuario.id}&select=papel,ativo`);
   const perfis = rPerfil.ok ? await rPerfil.json() : [];
   const perfil = perfis[0];
   if(!perfil || !perfil.ativo || perfil.papel !== "admin")
     return resposta(403, {erro: "só o administrador pode gerenciar acessos"});
-
+ 
   let corpo = {};
   try { corpo = JSON.parse(evento.body || "{}"); } catch(e){ return resposta(400, {erro: "pedido malformado"}); }
-
+ 
   /* ---------- criar acesso ---------- */
   if(corpo.acao === "convidar"){
     const email = String(corpo.email || "").trim().toLowerCase();
     const nome  = String(corpo.nome || "").trim();
     const papel = PAPEIS_OK.includes(corpo.papel) ? corpo.papel : "consulta";
     if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return resposta(400, {erro: "e-mail inválido"});
-
+ 
     let novoId = null, senha = null;
-
+ 
     if(corpo.sem_email){
       senha = senhaProvisoria();
       const r = await adm("/auth/v1/admin/users", {
@@ -76,7 +76,12 @@ exports.handler = async (evento) => {
       if(!r.ok) return resposta(400, {erro: d.msg || d.message || d.error_description || "não consegui criar o usuário"});
       novoId = d.id;
     }else{
-      const r = await adm("/auth/v1/invite", {
+      /* para onde o link do convite devolve a pessoa. Explícito aqui para não
+         depender do Site URL configurado no Supabase. */
+      const destino = process.env.SITE_URL || process.env.URL
+        || evento.headers.origin || evento.headers.Origin || "";
+      const r = await adm("/auth/v1/invite"
+        + (destino ? "?redirect_to=" + encodeURIComponent(destino) : ""), {
         method: "POST",
         body: JSON.stringify({email, data: {nome}})
       });
@@ -90,7 +95,7 @@ exports.handler = async (evento) => {
       }
       novoId = d.id;
     }
-
+ 
     /* o gatilho do banco já criou o perfil; aqui só se ajusta papel, nome e liberação */
     if(novoId){
       await adm(`/rest/v1/perfis?user_id=eq.${novoId}`, {
@@ -101,7 +106,7 @@ exports.handler = async (evento) => {
     }
     return resposta(200, {ok: true, senha_provisoria: senha});
   }
-
+ 
   /* ---------- excluir acesso ---------- */
   if(corpo.acao === "excluir"){
     const id = String(corpo.user_id || "");
@@ -114,6 +119,6 @@ exports.handler = async (evento) => {
     }
     return resposta(200, {ok: true});
   }
-
+ 
   return resposta(400, {erro: "ação desconhecida"});
 };
