@@ -3428,14 +3428,19 @@ function pinta(id){
 
 function recalcular(){
   const msg = el("dd-msg");
+  /* outros módulos (medições) se penduram aqui sem mexer neste arquivo */
+  const EXT = window.DADOS_EXTRA || {};
+  const ruinsExt = EXT.erros ? EXT.erros() : 0;
+
   /* arquivo que falhou trava a geração: senão publica-se a versão antiga achando que atualizou */
   const ruins = Object.entries(CARGA).filter(([, c]) => c && c.erro);
-  if(ruins.length){
+  if(ruins.length || ruinsExt){
     NOVO = null;
     msg.className = "dd-msg erro";
-    msg.textContent = ruins.length === 1
+    const quantos = ruins.length + ruinsExt;
+    msg.textContent = quantos === 1
       ? "Um arquivo não pôde ser lido. Corrija ou remova o envio antes de gerar o painel."
-      : `${ruins.length} arquivos não puderam ser lidos. Corrija-os antes de gerar o painel.`;
+      : `${quantos} arquivos não puderam ser lidos. Corrija-os antes de gerar o painel.`;
     el("dd-gerar").disabled = true;
     el("dd-previa").disabled = true;
     return;
@@ -3459,11 +3464,21 @@ function recalcular(){
     msg.className = "dd-msg ok";
     NOVO.resumo = {arquivos: Object.keys(CARGA), producao: prod.linhas.length,
                    receita: Math.round(rt), gratificacao: Math.round(gr), orcamento: prod.orc.length};
+    if(EXT.resumo) partes.push(...EXT.resumo());
     msg.innerHTML = partes.join("<br>");
     el("dd-gerar").disabled = false;
     el("dd-previa").disabled = false;
   }catch(e){
     NOVO = null;
+    /* sem planilha de produção não há o que recalcular; se houver medição pendente,
+       o botão continua valendo para ela */
+    if(EXT.pendente && EXT.pendente()){
+      msg.className = "dd-msg ok";
+      msg.innerHTML = (EXT.resumo ? EXT.resumo() : []).join("<br>");
+      el("dd-gerar").disabled = false;
+      el("dd-previa").disabled = false;
+      return;
+    }
     msg.className = "dd-msg erro";
     msg.textContent = "Não consegui recalcular: " + e.message;
     el("dd-gerar").disabled = true;
@@ -3496,35 +3511,53 @@ async function recebe(id, arquivo){
 let enviando = false;
 
 async function salvar(){
-  if(enviando || !NOVO) return;
+  const EXT = window.DADOS_EXTRA || {};
+  const temExtra = !!(EXT.pendente && EXT.pendente());
+  if(enviando || (!NOVO && !temExtra)) return;
   const msg = el("dd-msg"), bt = el("dd-gerar");
   enviando = true; bt.disabled = true; el("dd-previa").disabled = true;
   bt.textContent = "Salvando…";
   msg.className = "dd-msg";
   msg.textContent = "Enviando os dados para o servidor. Não feche a página.";
+  const recados = [];
+  let mudou = false;
   try{
-    const conjuntos = Object.keys(CARGA);
     const mandaProd = !!(CARGA.cons || CARGA.orcRs || CARGA.orcSq);
     const mandaGrat = !!CARGA.grat;
-    const {data, error} = await window.SB.rpc("importar", {
-      p_prod: mandaProd ? NOVO.prod : null,
-      p_dados: mandaGrat ? NOVO.dados : null,
-      p_conjuntos: conjuntos,
-      p_resumo: NOVO.resumo || {}
-    });
-    if(error) throw new Error(error.message);
-    if(data && data.situacao === "sem_alteracao"){
-      msg.className = "dd-msg ok";
-      msg.textContent = "Os dados enviados são iguais aos que já estão no servidor. Nada foi alterado.";
-      return;
+
+    /* as planilhas de produção e gratificação, numa transação só, como sempre foi */
+    if(NOVO && (mandaProd || mandaGrat)){
+      const conjuntos = Object.keys(CARGA);
+      const {data, error} = await window.SB.rpc("importar", {
+        p_prod: mandaProd ? NOVO.prod : null,
+        p_dados: mandaGrat ? NOVO.dados : null,
+        p_conjuntos: conjuntos,
+        p_resumo: NOVO.resumo || {}
+      });
+      if(error) throw new Error(error.message);
+      if(data && data.situacao === "sem_alteracao"){
+        recados.push("Produção e gratificação: o que você enviou é igual ao que já está no servidor.");
+      }else{
+        mudou = true;
+        recados.push("Produção e gratificação gravadas (versão " + (data && data.versao) + ").");
+      }
     }
+
+    /* as medições, que são outra tabela e por isso outra chamada */
+    if(temExtra){
+      recados.push(await EXT.salvar());
+      mudou = true;
+    }
+
     msg.className = "dd-msg ok";
-    msg.innerHTML = "Dados gravados no servidor (versão " + (data && data.versao) + "). "
-      + "Recarregando o painel para você conferir…";
-    setTimeout(() => location.reload(), 1400);
+    msg.innerHTML = recados.join("<br>")
+      + (mudou ? "<br>Recarregando o painel para você conferir…" : "");
+    if(mudou) setTimeout(() => location.reload(), 1600);
   }catch(e){
+    /* se a primeira gravação passou e a segunda falhou, o recado diz exatamente isso */
     msg.className = "dd-msg erro";
-    msg.textContent = "Não consegui gravar: " + e.message;
+    msg.innerHTML = (recados.length ? recados.join("<br>") + "<br>" : "")
+      + "Não consegui gravar: " + e.message;
   }finally{
     enviando = false;
     bt.textContent = "Salvar no servidor";
@@ -3553,6 +3586,8 @@ function pgDados(){
 }
 
 PAGINAS.dados = pgDados;
+/* quem se pendura em window.DADOS_EXTRA precisa poder pedir o recálculo */
+window.DADOS_RECALC = recalcular;
 })();
 
 </script>
@@ -3693,6 +3728,303 @@ PAGINAS.usuarios = pgUsuarios;
 })();
 
 </script>
+<script type="text/plain" id="js-med">
+/* ============================================================
+   MEDIÇÕES E RECEBIMENTOS — leitura das planilhas no navegador.
+
+   Este arquivo é acréscimo: ele monta o próprio bloco dentro da aba
+   de Atualização de dados e não toca em nada do que já existe ali.
+
+   As regras são as mesmas do med_build.py, que converteu o histórico.
+   Se uma mudar aqui, tem que mudar lá — os dois têm que dar os mesmos
+   números, e é assim que a conferência é feita.
+   ============================================================ */
+(() => {
+const {el, nf, rsC} = window.PAINEL;
+
+/* ---------- mapa das colunas ----------
+   A base antiga guarda o serviço na coluna "Equipamento" e não tem máquina.
+   A base nova guarda o serviço em "Modalidade" e a máquina em "Equipamento". */
+const CAMPOS = [
+  ["obra",             "A",  "C"],
+  ["cliente",          "B",  "D"],
+  ["servico",          "C",  "F"],
+  ["equipamento",      null, "E"],
+  ["dia_ini",          "E",  "G"],
+  ["dia_fim",          "F",  "H"],
+  ["tipo_medicao",     "H",  "J"],
+  ["situacao",         "J",  "K"],
+  ["valor_estimado",   "L",  "L"],
+  ["valor_medido",     "M",  "M"],
+  ["data_envio",       "N",  "N"],
+  ["valor_medido_rev", "O",  "O"],
+  ["data_rev",         "P",  "P"],
+  ["data_aprovacao",   "Q",  "AA"],
+  ["dias_aprovacao",   "R",  "AB"],
+  ["valor_aprovado",   "S",  "AC"],
+  ["iss_retido",       "CE", "BI"],
+  ["pct_iss",          "CF", "BJ"],
+  ["imposto_total",    "CG", "BK"],
+  ["retencoes",        "CH", "BL"],
+  ["data_nf",          "CI", "BM"],
+  ["tipo_nf",          "CJ", "BN"],
+  ["num_nf",           "CK", "BO"],
+  ["valor_liquido",    "CL", "BP"],
+  ["multa",            "CM", "BQ"],
+  ["juros",            "CN", "BR"],
+  ["retencao",         "CO", "BS"],
+  ["liquido_encargos", "CP", "BT"],
+  ["data_pag_1",       "CQ", "BU"],
+  ["data_pag_nova",    "CR", "BV"],
+  ["data_recebimento", "CV", "BZ"],
+  ["status",           "CX", "CB"],
+  ["cobranca",         "DJ", "CE"],
+];
+const DATAS = new Set(["dia_ini","dia_fim","data_envio","data_rev","data_aprovacao",
+                       "data_nf","data_pag_1","data_pag_nova","data_recebimento"]);
+const NUMEROS = new Set(["valor_estimado","valor_medido","valor_medido_rev","valor_aprovado",
+                         "pct_iss","imposto_total","retencoes","valor_liquido","multa","juros",
+                         "retencao","liquido_encargos","dias_aprovacao"]);
+
+/* o serviço do histórico usa outros nomes */
+const SERVICO = {PIT:"PIT", PDA:"PDA", PCE:"PCE", "PCE-T":"PCE-T", "PCE-H":"PCE-H",
+                 PCP:"PCP", SAP:"SAP", PLACA:"PCP", "PROJETO GEOTESTE":"PROJETO"};
+
+const idx = letra => {
+  let n = 0;
+  for(const c of letra.toUpperCase()) n = n * 26 + (c.charCodeAt(0) - 64);
+  return n - 1;
+};
+
+const texto = v => (v == null || v instanceof Date) ? "" : String(v).trim();
+/* 6 casas só para tirar o ruído do ponto flutuante: arredondar em 2 aqui criaria
+   empate (x,xx5), e o JavaScript e o Python desempatam para lados diferentes. */
+const numero = v => typeof v === "number" && isFinite(v) ? Math.round(v * 1e6) / 1e6 : 0;
+
+/* data virada para AAAA-MM-DD. Célula de data vazia no Excel chega como 1899/1900:
+   isso não é data, é lixo de formatação, e vira vazio. */
+function dia(v){
+  let d = v;
+  if(typeof v === "number" && v > 0) d = new Date(Date.UTC(1899, 11, 30 + Math.floor(v)));
+  if(typeof v === "string" && /^\d{4}-\d{2}-\d{2}/.test(v)) return v.slice(0, 10);
+  if(!(d instanceof Date) || isNaN(d)) return "";
+  const a = d.getFullYear();
+  if(a < 1990) return "";
+  const p = n => String(n).padStart(2, "0");
+  return `${a}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+
+const obraBase = v => texto(v).split("-")[0].trim();
+const serv = v => { const s = texto(v).toUpperCase(); return SERVICO[s] || s; };
+
+function diasEntre(a, b){
+  if(!a || !b) return 0;
+  return Math.round((Date.parse(b) - Date.parse(a)) / 86400000) + 1;
+}
+
+/* ---------- leitura de uma planilha ---------- */
+function ler(wb, tipo){
+  const aba = tipo === "panorama" ? "Panorama de Medição" : "Controle";
+  const ws = wb.Sheets[aba];
+  if(!ws) throw new Error(`não achei a aba "${aba}" nesta planilha. `
+    + `As abas que vieram: ${wb.SheetNames.slice(0, 6).join(", ")}.`);
+  const inicio = tipo === "panorama" ? 1 : 8;     // primeira linha de dados, base zero
+  const bruto = XLSX.utils.sheet_to_json(ws, {header: 1, range: inicio, raw: true});
+  const chave = idx(tipo === "panorama" ? "A" : "C");
+
+  const linhas = [];
+  for(const r of bruto){
+    if(!r || !texto(r[chave])) continue;
+    const l = {};
+    for(const [nome, hist, atual] of CAMPOS){
+      const letra = tipo === "panorama" ? hist : atual;
+      const v = letra ? r[idx(letra)] : null;
+      if(DATAS.has(nome))          l[nome] = dia(v);
+      else if(NUMEROS.has(nome))   l[nome] = numero(v);
+      else if(nome === "servico")  l[nome] = serv(v);
+      else if(nome === "obra")     l[nome] = obraBase(v);
+      else                         l[nome] = texto(v);
+    }
+    l.adiantamento = l.tipo_medicao.toLowerCase().includes("diantamento");
+    l.dias_corridos = diasEntre(l.dia_ini, l.dia_fim);
+    linhas.push(l);
+  }
+  if(!linhas.length) throw new Error("a aba veio vazia — confira se o arquivo é o certo.");
+  return linhas;
+}
+
+/* ---------- o ano do arquivo, que define a fonte ----------
+   Só olha datas de fato consumado (envio, revisão, nota). Datas de previsão
+   de pagamento ficam de fora de propósito: elas apontam para o ano que vem
+   e fariam o arquivo se apresentar como se fosse do ano seguinte. */
+function anoDoArquivo(linhas){
+  let maior = 0;
+  for(const l of linhas)
+    for(const c of ["data_envio", "data_rev", "data_nf"]){
+      const a = l[c] ? +l[c].slice(0, 4) : 0;
+      if(a > maior) maior = a;
+    }
+  const teto = new Date().getFullYear() + 1;
+  return Math.min(maior || new Date().getFullYear(), teto);
+}
+
+/* ---------- as quatro medidas, iguais às do banco ---------- */
+const MEDIDAS = {
+  medido:    l => [l.valor_medido_rev, l.data_rev],
+  faturado:  l => [l.valor_aprovado,   l.data_nf],
+  recebido:  l => [l.liquido_encargos, l.data_recebimento],
+  a_faturar: l => /^em negocia/i.test(l.situacao) ? [l.valor_medido_rev, l.data_envio] : [0, ""],
+  desconto:  l => (l.data_rev && l.valor_medido)
+                  ? [Math.round((l.valor_medido - l.valor_medido_rev) * 1e6) / 1e6, l.data_rev] : [0, ""],
+};
+
+function porAno(linhas){
+  const t = {};
+  for(const l of linhas)
+    for(const [nome, fn] of Object.entries(MEDIDAS)){
+      const [v, quando] = fn(l);
+      if(!v || !quando) continue;
+      const a = quando.slice(0, 4);
+      (t[a] = t[a] || {})[nome] = Math.round(((t[a][nome] || 0) + v) * 1e6) / 1e6;
+    }
+  return t;
+}
+
+/* ============================================================
+   TELA — as caixas entram na página de Atualização de dados e a gravação
+   vai pelo mesmo botão das outras planilhas. Este arquivo não desenha
+   botão próprio: ele se pendura em window.DADOS_EXTRA.
+   ============================================================ */
+const CARGA = {};   // tipo -> {arquivo, linhas, fonte, erro}
+
+const CAIXAS = [
+  {tipo: "controle", titulo: "Controle de medições e recebimentos",
+   dica: "Aba <b>Controle</b>. É este que você sobe a cada atualização."},
+  {tipo: "panorama", titulo: "Panorama de Medições — histórico",
+   dica: "Aba <b>Panorama de Medição</b>. Sobe uma vez só: depois de gravado, o histórico fica congelado."},
+];
+
+function monta(){
+  const pag = el("pg-dados");
+  if(!pag || el("med-bloco")) return;
+  const pub = pag.querySelector(".publicar");
+  if(!pub) return;
+  const caixa = document.createElement("div");
+  caixa.id = "med-bloco";
+  caixa.innerHTML = `
+    <h2 class="bloco-t">Medições e recebimentos</h2>
+    <p class="bloco-p">Base própria, separada da produção. Cada arquivo substitui só a parte dele —
+       subir o Controle do ano não toca no histórico.</p>
+    <div class="grade g2">
+      ${CAIXAS.map(c => `
+        <div class="painel arq" id="med-arq-${c.tipo}">
+          <h2>${c.titulo}</h2>
+          <p>${c.dica}</p>
+          <div class="arq-acoes">
+            <button class="btn" type="button" data-medsobe="${c.tipo}">Escolher arquivo</button>
+            <input type="file" accept=".xlsx,.xlsm" hidden data-medarq="${c.tipo}">
+          </div>
+          <div class="arq-estado" data-medestado="${c.tipo}">
+            <span class="arq-vazio">Nenhum arquivo enviado — o painel segue com as medições atuais.</span>
+          </div>
+        </div>`).join("")}
+    </div>`;
+  pub.parentNode.insertBefore(caixa, pub);
+
+  caixa.querySelectorAll("[data-medsobe]").forEach(b => {
+    b.onclick = () => caixa.querySelector(`[data-medarq="${b.dataset.medsobe}"]`).click();
+  });
+  caixa.querySelectorAll("[data-medarq]").forEach(i => {
+    i.onchange = ev => { if(ev.target.files[0]) recebe(i.dataset.medarq, ev.target.files[0]); i.value = ""; };
+  });
+}
+
+function pinta(tipo){
+  const alvo = document.querySelector(`[data-medestado="${tipo}"]`);
+  if(!alvo) return;
+  const c = CARGA[tipo];
+  if(!c){
+    alvo.innerHTML = `<span class="arq-vazio">Nenhum arquivo enviado — o painel segue com as medições atuais.</span>`;
+    return;
+  }
+  if(c.erro){
+    alvo.innerHTML = `<span class="arq-erro">✕ ${c.arquivo}<br>${c.erro}</span>`
+      + `<button class="lnk" type="button" data-medlimpa="${tipo}">remover este envio</button>`;
+    alvo.querySelector("[data-medlimpa]").onclick = () => { delete CARGA[tipo]; pinta(tipo); recalcula(); };
+    return;
+  }
+  alvo.innerHTML = `<span class="arq-ok">✓ ${c.arquivo}</span>`
+    + `<span class="arq-info">${nf(c.linhas.length)} linhas · grava como <b>${c.fonte}</b></span>`;
+}
+
+const recalcula = () => { if(window.DADOS_RECALC) window.DADOS_RECALC(); };
+
+async function recebe(tipo, arquivo){
+  const alvo = document.querySelector(`[data-medestado="${tipo}"]`);
+  alvo.innerHTML = `<span class="arq-vazio">Lendo ${arquivo.name}…</span>`;
+  try{
+    const wb = XLSX.read(await arquivo.arrayBuffer(), {cellDates: true});
+    const linhas = ler(wb, tipo);
+    const fonte = tipo === "panorama" ? "panorama" : "controle:" + anoDoArquivo(linhas);
+    CARGA[tipo] = {arquivo: arquivo.name, linhas, fonte};
+  }catch(e){
+    CARGA[tipo] = {arquivo: arquivo.name, erro: e.message};
+  }
+  pinta(tipo);
+  recalcula();
+}
+
+/* ---------- o que a página de dados pergunta a este módulo ---------- */
+const NOME = {controle: "Controle", panorama: "Histórico"};
+
+window.DADOS_EXTRA = {
+  erros:    () => Object.values(CARGA).filter(c => c && c.erro).length,
+  pendente: () => Object.values(CARGA).some(c => c && !c.erro),
+
+  resumo(){
+    return Object.entries(CARGA).filter(([, c]) => c && !c.erro).map(([tipo, c]) => {
+      const t = porAno(c.linhas);
+      const ano = Object.keys(t).sort().pop();
+      const d = t[ano] || {};
+      return `Medições · ${NOME[tipo]}: ${nf(c.linhas.length)} linhas como <b>${c.fonte}</b>`
+        + ` · ${ano}: medido ${rsC(d.medido || 0)} · faturado ${rsC(d.faturado || 0)}`
+        + ` · recebido ${rsC(d.recebido || 0)}`;
+    });
+  },
+
+  async salvar(){
+    const feito = [];
+    for(const [tipo, c] of Object.entries(CARGA)){
+      if(!c || c.erro) continue;
+      const {data, error} = await window.SB.rpc("importar_medicoes", {
+        p_fonte: c.fonte,
+        p_linhas: c.linhas,
+        p_resumo: {arquivo: c.arquivo, linhas: c.linhas.length, anos: porAno(c.linhas)}
+      });
+      if(error) throw new Error(traduz(error.message));
+      feito.push(`${c.fonte} (${nf(data.depois)} linhas)`);
+      delete CARGA[tipo];
+      pinta(tipo);
+    }
+    return "Medições gravadas: " + feito.join(" · ") + ".";
+  },
+};
+
+function traduz(m){
+  if(/sem permissão/i.test(m)) return "só o administrador pode importar dados.";
+  if(/fonte inválida/i.test(m)) return "não consegui identificar o ano do arquivo.";
+  if(/nenhuma linha/i.test(m))  return "a planilha não trouxe nenhuma linha.";
+  return m;
+}
+
+/* a aba de dados só existe para o administrador */
+if(window.PAINEL.PAGINAS && window.PAINEL.PAGINAS.dados){
+  const antes = window.PAINEL.PAGINAS.dados;
+  window.PAINEL.PAGINAS.dados = function(){ antes.apply(this, arguments); monta(); recalcula(); };
+}
+})();
+
+</script>
 <script>
 /* ============================================================
    SESSÃO E DADOS — tudo passa pelo Supabase.
@@ -3814,6 +4146,7 @@ function ligarPainel(papel){
   rodar("js-app");        // produção e resultado
   rodar("js-dados");      // atualização de dados
   rodar("js-usuarios");   // usuários e permissões
+  rodar("js-med");        // medições e recebimentos
   /* a aba de dados só existe depois que o script dela roda; por isso o desvio vem aqui */
   if(window.SEM_DADOS && window.PAINEL) window.PAINEL.vaiPara("dados");
 }
