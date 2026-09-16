@@ -1395,7 +1395,9 @@ select.sel.mini{padding:5px 8px; font-size:12px}
       <div class="painel">
         <h2>Valor por competência</h2>
         <p>Do que foi emitido em cada mês, quanto já voltou — não importa em que mês o
-           pagamento entrou. A pílula embaixo diz o percentual já recebido daquela competência.
+           pagamento entrou. A pílula embaixo diz o percentual já recebido daquela competência:
+           <b style="color:#c0392b">vermelho até 60%</b>, <b style="color:#eda100">amarelo de 60 a 80%</b>
+           e <b style="color:var(--pos)">verde acima de 80%</b>.
            Os dois lados em valor líquido, para a conta fechar.</p>
         <div class="rolagem-x" id="ft-mes"></div>
       </div>
@@ -2575,9 +2577,11 @@ function gGrupos(grupos, series, o){
     });
     /* a pílula embaixo do grupo: ou o desvio, ou um texto que quem chamou definiu */
     if(g.pilula){
-      const bom = g.pilula.bom;
-      s += `<rect x="${x0}" y="${h-base+4}" width="${gw}" height="17" rx="8.5" fill="${bom ? "var(--s3)" : "var(--s2)"}" opacity=".16"></rect>`
-         + `<text x="${x0+gw/2}" y="${h-base+16}" text-anchor="middle" style="font-size:10.5px; font-weight:600; fill:${bom ? "var(--pos)" : "var(--warn)"}">${esc(g.pilula.txt)}</text>`;
+      /* a cor pode vir pronta de quem chamou; sem ela, vale o bom/ruim de sempre */
+      const c = g.pilula.cor || (g.pilula.bom ? "var(--pos)" : "var(--warn)");
+      const fundo = g.pilula.cor || (g.pilula.bom ? "var(--s3)" : "var(--s2)");
+      s += `<rect x="${x0}" y="${h-base+4}" width="${gw}" height="17" rx="8.5" fill="${fundo}" opacity=".16"></rect>`
+         + `<text x="${x0+gw/2}" y="${h-base+16}" text-anchor="middle" style="font-size:10.5px; font-weight:600; fill:${c}">${esc(g.pilula.txt)}</text>`;
     }else if(g.delta !== null && g.delta !== undefined && g.vals.some(v => v > 0)){
       const bom = g.delta >= 0;
       s += `<rect x="${x0}" y="${h-base+4}" width="${gw}" height="17" rx="8.5" fill="${bom ? "var(--s3)" : "var(--s2)"}" opacity=".16"></rect>`
@@ -4760,7 +4764,7 @@ function pgFinVisao(){
   el("fv-prazos").innerHTML = CICLOS.map(cl => {
     const xs = prazosDe(rows.filter(l => no(cl.ate(l))), cl);
     return kpi(cl.nome, xs.length ? nf(mediana(xs)) + " dias" : "—",
-               xs.length ? `mediana de ${nf(xs.length)} casos · média ${nf(xs.reduce((s2,v)=>s2+v,0)/xs.length,1)}` : "sem caso fechado no recorte");
+               xs.length ? `mediana de ${nf(xs.length)} casos · média ${nf(xs.reduce((s2,v)=>s2+v,0)/xs.length,1)} dias` : "sem caso fechado no recorte");
   }).join("");
 
   const a = porMes(rows, "aFaturar", no), b = porMes(rows, "faturado", no), c = porMes(rows, "recebido", no);
@@ -4849,12 +4853,10 @@ function pgFinFatura(){
                             ? dias(l.data_envio, l.data_nf) : null).filter(v => v !== null);
   const pzMedia = pz.length ? pz.reduce((a, v) => a + v, 0) / pz.length : 0;
 
-  /* o terceiro cartão: quanto do medido revisado sobreviveu até a nota.
-     É o ajuste da negociação — o que o cliente aprovou a menos (ou a mais). */
-  const comRev = notas.filter(l => +l.valor_medido_rev);
-  const baseRev = comRev.reduce((a, l) => a + (+l.valor_medido_rev || 0), 0);
-  const aprov = comRev.reduce((a, l) => a + (+l.valor_aprovado || 0), 0);
-  const ajuste = baseRev - aprov;
+  /* o terceiro cartão: a melhor semana do recorte — quanto foi e quando foi */
+  const semFat = porSemana(rows, "faturado", no);
+  const melhor = [...semFat.entries()].sort((a, b) => b[1] - a[1])[0];
+  const qtdMelhor = melhor ? notas.filter(l => semana(l.data_nf) === melhor[0]).length : 0;
 
   el("fj-sub").textContent = `${nf(notas.length)} notas emitidas`
     + (anos.length ? ` · ${anos.join(", ")}` : " · todas as datas");
@@ -4863,9 +4865,10 @@ function pgFinFatura(){
     + kpi("Prazo da medição até a nota", pz.length ? nf(mediana(pz)) + " dias" : "—",
           pz.length ? `mediana de ${nf(pz.length)} notas · média ${nf(pzMedia, 1)} dias · do envio da medição até a emissão`
                     : "sem data de envio no recorte")
-    + kpi("Ajuste na aprovação", (ajuste >= 0 ? "−" : "+") + rsC(Math.abs(ajuste)),
-          baseRev ? `${pct1(Math.abs(ajuste) / baseRev)} do medido revisado · ${ajuste >= 0 ? "cortado na negociação" : "acrescentado na negociação"}`
-                  : "sem medição revisada no recorte");
+    + kpi("Melhor semana", melhor ? rsC(melhor[1]) : "—",
+          melhor ? (() => { const r = rotuloSemana(melhor[0]);
+                            return `semana ${r.n} de ${r.m} · ${nf(qtdMelhor)} notas · maior faturamento do recorte`; })()
+                 : "sem nota emitida no recorte");
 
   el("fj-sem").innerHTML = barrasSemana(porSemana(rows, "faturado", no), pg, "var(--s1)", "Faturado — valor aprovado na nota");
   ligaSel("fj-sem", pg, redesenha(pg));
@@ -4908,7 +4911,9 @@ function pgFinReceb(){
     + (anos.length ? ` · ${anos.join(", ")}` : " · todas as datas");
   el("fr-kpis").innerHTML =
       kpi("Recebido", rsC(tot), `${nf(pagas.length)} notas pagas`)
-    + kpi("Prazo típico", nf(prazoTipico) + " dias", "da emissão da nota até o pagamento")
+    + kpi("Prazo típico", prazos.length ? nf(prazoTipico) + " dias" : "—",
+          prazos.length ? `mediana de ${nf(prazos.length)} notas · média ${nf(prazos.reduce((a,v)=>a+v,0)/prazos.length, 1)} dias · da emissão da nota até o pagamento`
+                        : "sem nota paga no recorte")
     + kpi("Multa e juros", rsC(mj), "cobrados por atraso e efetivamente recebidos");
 
   el("fr-sem").innerHTML = barrasSemana(porSemana(rows, "recebido", no), pg, "var(--s3)", "Recebido — líquido com multa e juros");
@@ -5230,7 +5235,7 @@ function pgFinFatRec(){
       const o = porComp.get(m);
       const p = o.v ? o.vpg / o.v : 0;
       return {rot: rotMes(m), vals: [o.v, o.vpg], txts: [rsC(o.v), rsC(o.vpg)], chave: m,
-              pilula: {txt: pct1(p) + " recebido", bom: p >= 0.9}};
+              pilula: {txt: pct1(p), cor: p > 0.8 ? "var(--pos)" : p > 0.6 ? "#eda100" : "#c0392b"}};
     }),
     [{nome:"Emitido", cor:"var(--s1)"}, {nome:"Recebido dessas notas", cor:"var(--s3)"}],
     {bw: 24, h: 300, topo: 70, selecao: selDe(pg)});
