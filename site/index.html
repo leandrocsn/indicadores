@@ -837,13 +837,20 @@ select.sel.mini{padding:5px 8px; font-size:12px}
       </button>
     </div>
     <nav id="menu">
+      <div class="navgrupo">Panorama geral</div>
+      <button class="nav" type="button" data-pg="panorama-geral"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2a10 10 0 1 0 10 10h-10V2ZM12 2a10 10 0 0 1 10 10M3 12h4M12 17v4"/></svg><span>Panorama geral</span></button>
+      <div class="navgrupo">Comercial</div>
+      <button class="nav" type="button" data-pg="com-propostas"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h12l4 4v12H4zM16 4v4h4M8 13h8M8 17h5"/></svg><span>Propostas enviadas</span><span class="cad aviso" title="Em construção">&#9888;&#65039;</span></button>
+      <button class="nav" type="button" data-pg="com-equivalentes"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M4 7l3-3M4 7l3 3M20 17H4M20 17l-3-3M20 17l-3 3"/></svg><span>Propostas equivalentes</span><span class="cad aviso" title="Em construção">&#9888;&#65039;</span></button>
+      <button class="nav" type="button" data-pg="com-fechado"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5M22 12a10 10 0 1 1-4.6-8.4"/></svg><span>Fechado</span><span class="cad aviso" title="Em construção">&#9888;&#65039;</span></button>
+      <button class="nav" type="button" data-pg="com-orcfech"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 20h4V10H3v10Zm7 0h4V4h-4v16Zm7 0h4v-7h-4v7Z"/></svg><span>Orçado x fechado</span><span class="cad aviso" title="Em construção">&#9888;&#65039;</span></button>
+      <button class="nav" type="button" data-pg="com-funil"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4h18l-7 8v7l-4 2v-9L3 4Z"/></svg><span>Funil e conversão</span><span class="cad aviso" title="Em construção">&#9888;&#65039;</span></button>
       <div class="navgrupo">Produção</div>
       <button class="nav" type="button" data-pg="visao"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 13h8V3H3v10Zm0 8h8v-6H3v6Zm10 0h8V11h-8v10Zm0-18v6h8V3h-8Z"/></svg><span>Visão geral</span></button>
       <button class="nav" type="button" data-pg="diaria"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 20h4V10H3v10Zm7 0h4V4h-4v16Zm7 0h4v-7h-4v7Z"/></svg><span>Produção diária</span></button>
       <button class="nav" type="button" data-pg="capacidade"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9h-9V3Z"/></svg><span>Capacidade produtiva</span></button>
       <button class="nav" type="button" data-pg="receitas"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2v20M17 6H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg><span>Receitas detalhadas</span></button>
       <button class="nav" type="button" data-pg="ensaios"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3v6l-5 9a2 2 0 0 0 1.7 3h12.6a2 2 0 0 0 1.7-3l-5-9V3M8 3h8"/></svg><span>Ensaios e preço médio</span></button>
-      <div class="navgrupo">Resultado</div>
       <button class="nav" type="button" data-pg="orcado"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18M7 15l4-5 3 3 5-7"/></svg><span>Orçado x realizado</span></button>
       <button class="nav" type="button" data-pg="anual"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v4M16 2v4M3 10h18M5 6h14a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2Z"/></svg><span>Comparativo anual</span></button>
       <div class="navgrupo">Financeiro</div>
@@ -1400,11 +1407,7 @@ select.sel.mini{padding:5px 8px; font-size:12px}
       <div class="grade g3" id="ft-kpis"></div>
       <div class="painel">
         <h2>Valor por competência</h2>
-        <p>Do que foi emitido em cada mês, quanto já voltou — não importa em que mês o
-           pagamento entrou. A pílula embaixo diz o percentual já recebido daquela competência:
-           <b style="color:#c0392b">vermelho até 60%</b>, <b style="color:#eda100">amarelo de 60 a 80%</b>
-           e <b style="color:var(--pos)">verde acima de 80%</b>.
-           Os dois lados em valor líquido, para a conta fechar.</p>
+        <p>Do que foi emitido em cada mês, quanto já voltou.</p>
         <div class="rolagem-x" id="ft-mes"></div>
       </div>
       <div class="painel">
@@ -1544,6 +1547,53 @@ select.sel.mini{padding:5px 8px; font-size:12px}
         <h2>Serviço a serviço</h2>
         <p>Do maior desconto em valor para o menor.</p>
         <div class="rolagem" id="fd-tab"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="pagina" id="pg-panorama-geral">
+    <div class="wrap">
+      <div class="cab"><div>
+        <h1>Panorama geral</h1>
+        <p id="pn-sub"></p>
+      </div></div>
+      <div class="filtros fin-bar" data-finbar="panorama-geral"></div>
+      <div class="grade g4" id="pn-kpis"></div>
+      <div class="grade g2" id="pn-coorte"></div>
+      <div class="grade g3" id="pn-alertas"></div>
+      <div class="painel">
+        <h2>Maturação das medições do período</h2>
+        <p>Cada mês traz as medições <b>revisadas naquele mês</b> e, ao lado, quanto delas já
+           virou nota e quanto já virou dinheiro — não importa quando a nota saiu ou o
+           pagamento entrou. A pílula embaixo diz o percentual já recebido daquele mês de
+           medição. Os meses recentes aparecem baixos porque as medições acabaram de sair;
+           isso é idade, não problema. Clique numa coluna para filtrar a tabela.</p>
+        <div class="rolagem-x" id="pn-mat"></div>
+      </div>
+      <div class="painel">
+        <h2>O caminho do dinheiro nas obras do recorte</h2>
+        <p>Aqui cada obra entra <b>com a vida inteira</b>, não só com o pedaço que caiu no
+           período. É a única forma justa de comparar os estágios, porque eles são defasados:
+           produz-se em maio, mede-se em junho, fatura-se em julho e recebe-se em agosto.
+           O percentual diz quanto sobrou do estágio anterior.</p>
+        <div class="rolagem-x centra" id="pn-funil"></div>
+      </div>
+      <div class="painel">
+        <h2>O que aconteceu em cada mês</h2>
+        <p>Quatro acontecimentos independentes, cada um no mês em que ocorreu — <b>não é um
+           funil</b>. O recebido de janeiro costuma ser de notas do ano anterior, por isso
+           pode ser maior que o produzido do próprio mês. Clique numa coluna para filtrar
+           a tabela.</p>
+        <div class="rolagem-x" id="pn-mes"></div>
+      </div>
+      <div class="painel">
+        <h2>Obra a obra</h2>
+        <p>Clique num dos cartões acima para ver aqui só as obras daquele grupo. Cada obra com <b>todos os seus números desde 2024</b>, não só o que caiu no
+           período — uma obra produzida em 2025 e medida em 2026 aparece inteira. Ordenada
+           da maior diferença entre produção e medição para a menor. A coluna
+           <b>Medido ÷ Produzido</b> é o alarme: perto de 1 está coerente, muito abaixo
+           indica serviço executado e não medido, muito acima indica adiantamento.</p>
+        <div class="rolagem" id="pn-tab"></div>
       </div>
     </div>
   </section>
@@ -2597,10 +2647,15 @@ function gSobre(itens, o){
     const selS = o.selecao && o.selecao.size;
     const apagaS = selS && !o.selecao.has(it.chave) ? ' opacity=".28"' : "";
     s += `<g${it.chave ? ` class="clicavel" data-sel="${esc(String(it.chave))}"` : ""}${apagaS}><title>${esc(it.rot)}: ${esc(it.txtReal)} de ${esc(it.txtCap)} (${pct(u)})</title>`
-       + `<rect x="${x}" y="${yc}" width="${bw}" height="${ac}" rx="3" fill="var(--surface-3)"></rect>`
+       + `<rect x="${x}" y="${yc}" width="${bw}" height="${ac}" rx="3" fill="${it.corFundo || "var(--surface-3)"}"></rect>`
        + `<text class="eixo2" x="${x+bw/2}" y="${yc-6}" text-anchor="middle">${esc(it.txtCap)}</text>`
-       + `<rect class="barra" x="${x}" y="${yr}" width="${bw}" height="${ar}" rx="3" fill="var(--s3)"></rect>`
-       + (it.real > 0 ? `<text class="vlr" x="${x+bw/2}" y="${yr-6}" text-anchor="middle" style="font-size:10px">${pct(u)}</text>`
+       + `<rect class="barra" x="${x}" y="${yr}" width="${bw}" height="${ar}" rx="3" fill="${it.cor || "var(--s3)"}"></rect>`
+       + (it.real > 0 ? (
+           /* com a barra da frente quase do tamanho da de trás, o percentual batia
+              no valor total. Quando há espaço, ele entra DENTRO da barra. */
+           (o.pctDentro && ar >= 26)
+             ? `<text x="${x+bw/2}" y="${yr+15}" text-anchor="middle" style="font-size:10.5px; font-weight:700; fill:#fff">${esc(it.txtPct || pct(u))}</text>`
+             : `<text class="vlr" x="${x+bw/2}" y="${yr-6}" text-anchor="middle" style="font-size:10px${it.corPct ? "; fill:" + it.corPct + "; font-weight:700" : ""}">${esc(it.txtPct || pct(u))}</text>`)
                       + `<text x="${x+bw/2}" y="${topo+alt+13}" text-anchor="middle" style="font-size:9.5px; fill:var(--ink-3)">${esc(it.txtReal)}</text>` : "")
        + `<text class="eixo" x="${x+bw/2}" y="${h-base+26}" text-anchor="middle">${esc(it.rot)}</text>`
        + `</g>`;
@@ -2610,7 +2665,8 @@ function gSobre(itens, o){
     }
   });
   return svg(w, h, s)
-    + legenda([{nome:"Capacidade instalada", cor:"var(--surface-3)"}, {nome:"Realizado", cor:"var(--s3)"}]);
+    + legenda(o.legenda || [{nome:"Capacidade instalada", cor:"var(--surface-3)"},
+                            {nome:"Realizado", cor:"var(--s3)"}]);
 }
 
 /* barras agrupadas (orçado x realizado) com pílula de desvio */
@@ -3555,7 +3611,7 @@ function pgAnual(){
    ============================================================ */
 const PAGINAS = {visao:pgVisao, diaria:pgDiaria, capacidade:pgCapacidade, receitas:pgReceitas,
                  ensaios:pgEnsaios, orcado:pgOrcado, anual:pgAnual, gratificacao:null};
-let paginaAtual = "visao";
+let paginaAtual = "panorama-geral";   /* o painel abre no Panorama geral */
 
 function atualizar(){
   Object.values(SELECAO).forEach(s => s.clear());   // filtro novo, seleção zerada
@@ -3589,6 +3645,11 @@ function vaiPara(id){
 
 /* tópicos anunciados no menu que ainda não têm planilha de origem */
 const EM_BREVE = {
+  "com-propostas":  "Lamentamos, mas este tópico ainda está em processo de criação. Muito em breve serão apresentadas as propostas enviadas.",
+  "com-equivalentes":"Lamentamos, mas este tópico ainda está em processo de criação. Muito em breve serão apresentadas as propostas equivalentes.",
+  "com-fechado":    "Lamentamos, mas este tópico ainda está em processo de criação. Muito em breve será apresentado o que foi fechado com os clientes.",
+  "com-orcfech":    "Lamentamos, mas este tópico ainda está em processo de criação. Muito em breve será apresentado o comparativo entre o orçado e o fechado.",
+  "com-funil":      "Lamentamos, mas este tópico ainda está em processo de criação. Muito em breve serão apresentados o funil comercial, a taxa de conversão e o tempo até o fechamento.",
   "margem-teorica": "Lamentamos, mas este tópico ainda está em processo de criação. Muito em breve serão apresentados os dados de margem teórica de cada obra.",
   "margem-real":    "Lamentamos, mas este tópico ainda está em processo de criação. Muito em breve serão apresentados os dados de margem real de cada obra.",
   "margem-comp":    "Lamentamos, mas este tópico ainda está em processo de criação. Muito em breve será apresentado o comparativo entre a margem teórica e a real."
@@ -3693,7 +3754,7 @@ document.addEventListener("click", ev => {
 function entrar(){
   document.body.classList.remove("entrando");
   el("entrada").setAttribute("aria-hidden", "true");
-  vaiPara(window.SEM_DADOS ? "dados" : (paginaAtual || "visao"));
+  vaiPara(window.SEM_DADOS ? "dados" : (paginaAtual || "panorama-geral"));
 }
 
 
@@ -4629,12 +4690,81 @@ if(window.PAINEL.PAGINAS && window.PAINEL.PAGINAS.dados){
 (() => {
 const {el, nf, PAGINAS} = window.PAINEL;
 const G = window.GRAF;
-const {kpi, tabela, gBarras, gGrupos, gBarrasH, gLinhas, gRosca, legenda, agrupa,
+const {kpi, tabela, gBarras, gGrupos, gSobre, gBarrasH, gLinhas, gRosca, legenda, agrupa,
        quartaDaSemana, rotSem, esc, vazio, pct1, rsC, COR, MES, MES3, alfa} = G;
 const criarBarra = window.BARRA_FABRICA;
 
-const MED = window.MED || [];
 const HOJE = new Date().toISOString().slice(0, 10);
+
+/* ---------- o painel inteiro começa em 01/01/2024 ----------
+   A base de produção começa nessa data, e a gratificação também. O histórico de
+   medições trazia 2023, o que fazia os Comparativos e o "todas as datas" falarem
+   de um ano que nenhuma outra tela conhece.
+
+   O corte é POR DATA, não por linha: cada data anterior a 2024 é apagada da linha,
+   e a linha só é descartada quando não sobra nenhuma data. Assim uma nota emitida
+   em dez/2023 e paga em fev/2024 continua contando no RECEBIDO de fevereiro — que
+   foi dinheiro que entrou de verdade —, mas o faturamento dela não aparece em lugar
+   nenhum, porque é de 2023. Era a regra que a Geoteste já usava na mão. */
+const INICIO = "2024-01-01";
+const CAMPOS_DATA = ["dia_ini", "dia_fim", "data_envio", "data_rev", "data_aprovacao",
+                     "data_nf", "data_pag_1", "data_pag_nova", "data_recebimento"];
+
+const MED = (window.MED || []).map(l => {
+  let tem = false;
+  const o = {...l};
+  for(const c of CAMPOS_DATA){
+    if(!o[c]) { o[c] = o[c] || ""; continue; }
+    if(o[c] < INICIO) o[c] = ""; else tem = true;
+  }
+  return tem ? o : null;
+}).filter(Boolean);
+
+/* ---------- cadastro de clientes: o número da obra manda ----------
+   A base de produção traz, para cada obra, o nome padronizado do cliente
+   ("Nome Obra"). O número da obra é chave exata — não depende de como alguém
+   digitou o nome naquele dia. Quando a obra não está na produção (medições de
+   obras antigas, ou serviços sem lançamento de campo), vale a regra de grupo. */
+/* a mesma obra é lançada na produção em etapas — G26033-1, G26033-2, G26033-3 —
+   enquanto a medição fala de G26033. O cadastro usa o número-base dos dois lados,
+   igual ao filtro de obra da produção. */
+const obraBase = o => String(o || "").split("-")[0].trim().toUpperCase();
+
+/* Se a planilha vier com a obra colada no cliente — "Construtora Tenda (Sobral)",
+   "Construtora Tenda (Life Jaguaré)" —, tirar o parêntese junta as duas. Mas há
+   parênteses que são informação de verdade: "Teixeira Morandini (Nexa)" diz para
+   quem o serviço foi feito, e não existe nenhuma outra Teixeira Morandini na base.
+   Por isso o corte só acontece quando ele REALMENTE une nomes repetidos: se depois
+   de tirar o parêntese sobra um nome só, o original fica como está. */
+const semParenteses = c => String(c || "")
+  .replace(/\s*-\s*Geoteste\s*$/i, "")
+  .replace(/\s*\([^)]*\)\s*/g, " ")
+  .trim().replace(/[\s-]+$/, "");
+
+const CAD_OBRA = (() => {
+  const m = new Map();
+  const P = window.PROD;
+  if(!P || !P.linhas) return m;
+
+  /* quais nomes encurtados são compartilhados por mais de um nome inteiro */
+  const irmaos = new Map();
+  for(const c of new Set(P.cli)){
+    const k = semParenteses(c);
+    if(!k) continue;
+    if(!irmaos.has(k)) irmaos.set(k, new Set());
+    irmaos.get(k).add(c);
+  }
+  const nomeDe = c => {
+    const k = semParenteses(c);
+    return (k && irmaos.get(k) && irmaos.get(k).size > 1) ? k : (c || "").trim();
+  };
+
+  for(const l of P.linhas){
+    const o = obraBase(P.obra[l[2]]), c = nomeDe(P.cli[l[3]]);
+    if(o && c && !m.has(o)) m.set(o, c);
+  }
+  return m;
+})();
 
 /* ---------- a meta ----------
    Vem do orçamento da produção, que é o mesmo do faturamento. O orçamento
@@ -4652,6 +4782,60 @@ function metaMes(m, servicos){
 }
 
 /* ---------- leituras de uma linha ---------- */
+/* O nome oficial de um cliente, em três tentativas:
+   1. pelo NÚMERO DA OBRA, no cadastro que veio da produção — chave exata;
+   2. pelo nome, reconciliado contra esse mesmo cadastro (ignora acento, caixa,
+      pontuação e ordem das palavras: "Tenda Construtora" e "Construtora Tenda"
+      são a mesma empresa, e "WR" é a "WR Construtora");
+   3. e, se nada casar, a regra de grupo de sempre.
+   Sem o passo 2 o painel partia a Tenda em dois: as obras que estão na produção
+   viravam "Construtora Tenda" e as que não estão ficavam "Tenda Construtora". */
+const GENERICO = new Set(["construtora","engenharia","consorcio","empreendimentos",
+  "incorporadora","ltda","sa","s","eireli","me","epp","construcoes","participacoes",
+  "obras","servicos"]);
+const palavras = s => (s || "").normalize("NFD").replace(/[̀-ͯ]/g, "")
+  .toLowerCase().match(/[a-z0-9]+/g) || [];
+
+const OFICIAL = (() => {
+  const exato = new Map(), conj = [];
+  for(const c of new Set(CAD_OBRA.values())){
+    const w = palavras(c);
+    if(!w.length) continue;
+    exato.set(w.join(""), c);
+    conj.push({set: new Set(w), nome: c});
+  }
+  return {exato, conj};
+})();
+
+const CACHE_CLI = new Map();
+function oficialDe(nome){
+  if(CACHE_CLI.has(nome)) return CACHE_CLI.get(nome);
+  const w = palavras(nome);
+  let r = nome;
+  if(w.length){
+    const chave = w.join("");
+    if(OFICIAL.exato.has(chave)) r = OFICIAL.exato.get(chave);
+    else{
+      const mesmas = OFICIAL.conj.filter(c => c.set.size === w.length && w.every(x => c.set.has(x)));
+      if(mesmas.length === 1) r = mesmas[0].nome;
+      else{
+        /* o nome curto cabe dentro do oficial: "WR" dentro de "WR Construtora".
+           Só vale se sobrar alguma palavra que não seja genérica, e se houver
+           um único candidato — senão prefiro deixar como está a arriscar. */
+        const sig = w.filter(x => !GENERICO.has(x));
+        if(sig.length){
+          const cab = OFICIAL.conj.filter(c => w.every(x => c.set.has(x)));
+          const nomes = [...new Set(cab.map(c => c.nome))];
+          if(nomes.length === 1) r = nomes[0];
+        }
+      }
+    }
+  }
+  CACHE_CLI.set(nome, r);
+  return r;
+}
+
+const cliDe = l => CAD_OBRA.get(obraBase(l.obra)) || oficialDe(grupoCli(l.cliente));
 const emNegociacao = l => /^em negocia/i.test(l.situacao || "");
 const vAberto = l => +l.liquido_encargos || +l.valor_liquido || 0;
 const vence   = l => l.data_pag_nova || l.data_pag_1 || l.data_nf;
@@ -4676,14 +4860,14 @@ const rotMes = m => MES3[+m.slice(5,7)-1] + "/" + m.slice(2,4);
 
 const ANOS_MED = [...new Set(MED.flatMap(l =>
   [l.data_rev, l.data_nf, l.data_recebimento, l.data_envio].map(ano).filter(Boolean)))]
-  .filter(a => a >= "2023").sort();
+  .filter(a => a >= "2024").sort();
 const ANO_PADRAO = ANOS_MED[ANOS_MED.length - 1] || String(new Date().getFullYear());
 
 /* ============================================================
    BARRA DE FILTROS — uma por tela, com a mesma fábrica da produção
    ============================================================ */
 const DIM_MED = {
-  cliente: {rot:"Cliente",     val: l => l.cliente,     ord: alfa, busca:true, larga:true},
+  cliente: {rot:"Cliente",     val: cliDe,           ord: alfa, busca:true, larga:true},
   obra:    {rot:"Nº da obra",  val: l => l.obra,        ord: alfa, busca:true},
   equip:   {rot:"Equipamento", val: l => l.equipamento, ord: alfa, busca:true},
   servico: {rot:"Serviço",     val: l => l.servico,     ord: alfa, busca:false},
@@ -4846,7 +5030,7 @@ function pgFinVisao(){
   avisoSel("fv-mes", pg, m => MES[+m.slice(5,7)-1] + "/" + m.slice(0,4), redesenha(pg));
 
   const notas = soSelecionadas(rows, pg, "faturado", no, mes);
-  const cli = agrupa(notas, l => l.cliente || "—", {v: l => +l.valor_aprovado || 0})
+  const cli = agrupa(notas, cliDe, {v: l => +l.valor_aprovado || 0})
               .sort((x, y) => y.v - x.v).slice(0, 9);
   el("fv-cli").innerHTML = gBarrasH(cli.map(x => ({
     rot: x.k.length > 30 ? x.k.slice(0, 29) + "…" : x.k, val: x.v, txt: rsC(x.v)})),
@@ -4896,7 +5080,7 @@ function pgFinMedicoes(){
   const somaLista = lista.reduce((a, l) => a + (+l.valor_medido_rev || 0), 0);
   el("fm-tab").innerHTML = tabela(
     ["Data", "Obra", "Cliente", "Serviço", "Tipo de medição", "Valor"],
-    lista.slice(0, 300).map(l => [brData(l.data_rev), l.obra, l.cliente, l.servico,
+    lista.slice(0, 300).map(l => [brData(l.data_rev), l.obra, cliDe(l), l.servico,
                                   l.tipo_medicao, rsC(+l.valor_medido_rev)]),
     [`Total · ${nf(lista.length)} medições`, "", "", "", "", rsC(somaLista)]);
 }
@@ -4953,7 +5137,7 @@ function pgFinFatura(){
   const somaLista = lista.reduce((a, l) => a + (+l.valor_aprovado || 0), 0);
   el("fj-tab").innerHTML = tabela(
     ["Data da nota", "Nota", "Obra", "Cliente", "Serviço", "Valor"],
-    lista.slice(0, 300).map(l => [brData(l.data_nf), l.num_nf || "—", l.obra, l.cliente,
+    lista.slice(0, 300).map(l => [brData(l.data_nf), l.num_nf || "—", l.obra, cliDe(l),
                                   l.servico, rsC(+l.valor_aprovado)]),
     [`Total · ${nf(lista.length)} notas`, "", "", "", "", rsC(somaLista)]);
 }
@@ -5013,7 +5197,7 @@ function pgFinReceb(){
   const somaLista = lista.reduce((a, l) => a + (+l.liquido_encargos || 0), 0);
   el("fr-tab").innerHTML = tabela(
     ["Data", "Obra", "Cliente", "Nota", "Tipo de medição", "Recebido"],
-    lista.slice(0, 300).map(l => [brData(l.data_recebimento), l.obra, l.cliente,
+    lista.slice(0, 300).map(l => [brData(l.data_recebimento), l.obra, cliDe(l),
                                   l.num_nf || "—", l.tipo_medicao, rsC(+l.liquido_encargos)]),
     [`Total · ${nf(lista.length)} recebimentos`, "", "", "", "", rsC(somaLista)]);
 }
@@ -5120,7 +5304,7 @@ function pgFinProg(){
       const at = dias(vence(l), HOJE);
       return [brData(vence(l)),
               simbolo(l) + selo(at) + (at > 0 ? `${nf(at)} dias de atraso` : "no prazo"),
-              esc(l.obra), esc(l.cliente), esc(l.num_nf || "—"), rsC(vAberto(l))];
+              esc(l.obra), esc(cliDe(l)), esc(l.num_nf || "—"), rsC(vAberto(l))];
     }),
     [`Total · ${nf(lista.length)} notas`, "", "", "", "", rsC(somaLista)]);
 
@@ -5204,7 +5388,7 @@ function pgFinAFaturar(){
     ["Envio", "Parada há", "Obra", "Cliente", "Serviço", "Tipo de medição", "Valor"],
     lista.map(l => {
       const d = dias(l.data_envio, HOJE);
-      return [brData(l.data_envio), selo(d) + `${nf(d)} dias`, esc(l.obra), esc(l.cliente),
+      return [brData(l.data_envio), selo(d) + `${nf(d)} dias`, esc(l.obra), esc(cliDe(l)),
               esc(l.servico), esc(l.tipo_medicao), rsC(+l.valor_medido_rev)];
     }),
     [`Total · ${nf(lista.length)} medições`, "", "", "", "", "", rsC(somaLista)]);
@@ -5297,15 +5481,22 @@ function pgFinFatRec(){
   });
   const mm = [...porComp.keys()].sort();
 
-  el("ft-mes").innerHTML = gGrupos(
+  /* mesmo desenho da utilização da capacidade produtiva: a coluna de trás é o que
+     foi emitido, a da frente é o que já voltou, e o percentual fica em cima. */
+  el("ft-mes").innerHTML = gSobre(
     mm.map(m => {
       const o = porComp.get(m);
       const p = o.v ? o.vpg / o.v : 0;
-      return {rot: rotMes(m), vals: [o.v, o.vpg], txts: [rsC(o.v), rsC(o.vpg)], chave: m,
-              pilula: {txt: pct1(p), cor: p > 0.8 ? "var(--pos)" : p > 0.6 ? "#eda100" : "#c0392b"}};
+      const c = p > 0.8 ? "var(--s3)" : p > 0.6 ? "#eda100" : "#c0392b";
+      return {rot: rotMes(m), chave: m, cap: o.v, real: o.vpg,
+              txtCap: rsC(o.v), txtReal: rsC(o.vpg), txtPct: pct1(p),
+              cor: c, corFundo: "var(--surface-3)", corPct: c};
     }),
-    [{nome:"Emitido", cor:"var(--s1)"}, {nome:"Recebido dessas notas", cor:"var(--s3)"}],
-    {bw: 24, h: 300, topo: 70, selecao: selDe(pg)});
+    {bw: 44, gap: 16, h: 320, selecao: selDe(pg), pctDentro: true,
+     legenda: [{nome:"Emitido na competência", cor:"var(--surface-3)"},
+               {nome:"Recebido · acima de 80%", cor:"var(--s3)"},
+               {nome:"de 60 a 80%", cor:"#eda100"},
+               {nome:"até 60%", cor:"#c0392b"}]});
   ligaSel("ft-mes", pg, redesenha(pg));
   avisoSel("ft-mes", pg, m => MES[+m.slice(5,7)-1] + "/" + m.slice(0,4), redesenha(pg));
 
@@ -5489,7 +5680,7 @@ function pgFinClientes(){
   const notas = rows.filter(l => l.data_nf && no(l.data_nf) && (+l.valor_aprovado || 0));
   const tot = notas.reduce((a, l) => a + (+l.valor_aprovado || 0), 0);
 
-  const cli = agrupa(notas, l => grupoCli(l.cliente), {
+  const cli = agrupa(notas, cliDe, {
     fat: l => +l.valor_aprovado || 0,
     rec: l => l.data_recebimento ? (+l.liquido_encargos || 0) : 0,
     ab:  l => aberta(l) ? vAberto(l) : 0,
@@ -5500,7 +5691,7 @@ function pgFinClientes(){
   /* quantas obras distintas cada grupo tem, para a tabela mostrar */
   const obrasDe = new Map(), prazoCli = new Map(), atrasoCli = new Map();
   notas.forEach(l => {
-    const k = grupoCli(l.cliente);
+    const k = cliDe(l);
     if(!obrasDe.has(k)) obrasDe.set(k, new Set());
     obrasDe.get(k).add(l.obra || "—");
     if(l.data_recebimento && l.data_nf && l.data_recebimento >= l.data_nf){
@@ -5638,9 +5829,273 @@ function pgFinDesconto(){
 }
 
 /* ============================================================
+   PANORAMA GERAL — produção e financeiro na mesma mesa
+
+   A chave é o NÚMERO DA OBRA, reduzido ao número-base: G26033-1, G26033-2 e
+   G26033-3 na produção são a obra G26033 da medição.
+
+   Para o filtro funcionar igual ao resto do painel, as duas bases viram uma
+   lista de EVENTOS: cada lançamento de produção é um evento "produzido" na sua
+   data, e cada medição vira até três eventos — "medido" na data da revisão,
+   "faturado" na data da nota e "recebido" na data do pagamento. Assim o
+   calendário cobre tudo e cada medida continua sendo filtrada pela data dela,
+   que é a regra do painel desde o começo.
+   ============================================================ */
+const ESTAGIOS = [
+  {id:"prod", nome:"Produzido", cor:"var(--s4)"},
+  {id:"med",  nome:"Medido",    cor:"var(--s2)"},
+  {id:"fat",  nome:"Faturado",  cor:"var(--s1)"},
+  {id:"rec",  nome:"Recebido",  cor:"var(--s3)"},
+];
+
+const EVENTOS = (() => {
+  const ev = [];
+  const P = window.PROD;
+  if(P && P.linhas){
+    for(const l of P.linhas){
+      const d = l[0], v = l[19];
+      if(!d || d < INICIO || !v) continue;
+      const ob = obraBase(P.obra[l[2]]);
+      ev.push({t:"prod", d, v, ob, cli: CAD_OBRA.get(ob) || (P.cli[l[3]] || "—"),
+               eq: P.maq[l[1]] || "", sv: P.mod[l[5]] || ""});
+    }
+  }
+  for(const l of MED){
+    const ob = obraBase(l.obra), cli = cliDe(l);
+    const comum = {ob, cli, eq: l.equipamento || "", sv: l.servico || ""};
+    const põe = (t, v, d) => { if(v && d) ev.push({t, d, v: +v, ...comum}); };
+    põe("med", +l.valor_medido_rev || 0, l.data_rev);
+    põe("fat", +l.valor_aprovado   || 0, l.data_nf);
+    põe("rec", +l.liquido_encargos || 0, l.data_recebimento);
+  }
+  return ev;
+})();
+
+const DIM_PAN = {
+  cliente: {rot:"Cliente",     val: e => e.cli, ord: alfa, busca:true, larga:true},
+  obra:    {rot:"Nº da obra",  val: e => e.ob,  ord: alfa, busca:true},
+  equip:   {rot:"Equipamento", val: e => e.eq,  ord: alfa, busca:true},
+  servico: {rot:"Serviço",     val: e => e.sv,  ord: alfa, busca:false},
+};
+
+/* qual cartão está servindo de filtro no panorama */
+let PN_SEL = "";
+const PN_ROTULO = {
+  prod:"obras com produção", med:"obras com medição", fat:"obras faturadas",
+  rec:"obras com recebimento", semMed:"produzidas e nunca medidas",
+  semProd:"medidas sem produção", adiant:"obras com adiantamento faturado",
+  coFat:"obras cujas medições do período já viraram nota",
+  coRec:"obras cujas medições do período já foram pagas",
+};
+
+function pgPanoramaGeral(){
+  const pg = "panorama-geral";
+  if(!BARRAS[pg]){
+    const inst = criarBarra({
+      linhas: () => EVENTOS,
+      dataDe: e => e.d,
+      dims: DIM_PAN,
+      alvo: () => document.querySelector(`[data-finbar="${pg}"]`),
+      rotulo: "lançamentos",
+      ateHoje: true,
+      aoMudar: () => { selDe(pg).clear(); PAGINAS[pg](); },
+    });
+    inst.montar(); inst.ligar(); inst.usar(pg);
+    const F = inst.atual();
+    inst.datas().filter(d => d.slice(0,4) === ANO_PADRAO).forEach(d => F.datas.add(d));
+    inst.abertos.add(ANO_PADRAO);
+    BARRAS[pg] = inst;
+  }
+  const inst = BARRAS[pg];
+  inst.pinta();
+
+  /* DOIS RECORTES, porque são duas perguntas diferentes:
+     - noPeriodo: o que aconteceu dentro das datas escolhidas. Bate com as outras telas.
+     - vidaToda:  tudo que já aconteceu nas obras que aparecem no período. É o único
+       jeito honesto de comparar os estágios, porque eles são DEFASADOS: produz-se em
+       maio, mede-se em junho, fatura-se em julho e recebe-se em agosto. Comparar os
+       quatro dentro do mesmo mês é comparar obras diferentes em momentos diferentes. */
+  const noPeriodo = inst.filtrar(null);
+  const semData   = inst.filtrar("datas", false);
+  const noEscopo  = new Set(noPeriodo.map(e => e.ob));
+
+  const totPer = {prod:0, med:0, fat:0, rec:0};
+  for(const e of noPeriodo) totPer[e.t] += e.v;
+
+  const porObra = new Map();
+  const totVida = {prod:0, med:0, fat:0, rec:0};
+  for(const e of semData){
+    if(!noEscopo.has(e.ob)) continue;
+    let o = porObra.get(e.ob);
+    if(!o){ o = {ob: e.ob, cli: e.cli, prod:0, med:0, fat:0, rec:0, de:e.d, ate:e.d}; porObra.set(e.ob, o); }
+    if(e.t === "prod") o.cli = e.cli;
+    if(e.d < o.de) o.de = e.d;
+    if(e.d > o.ate) o.ate = e.d;
+    o[e.t] += e.v; totVida[e.t] += e.v;
+  }
+  const obras = [...porObra.values()];
+
+  const anos = [...new Set([...inst.atual().datas].map(ano))].sort();
+  el("pn-sub").textContent = `${nf(obras.length)} obras com movimento no recorte`
+    + (anos.length ? ` · ${anos.join(", ")}` : " · todas as datas")
+    + (PN_SEL ? ` · tabela mostrando só ${PN_ROTULO[PN_SEL]}` : "");
+
+  /* os cartões são do PERÍODO — são eles que batem com as outras telas */
+  /* os cartões são botões: clicar recorta a tabela pelas obras daquele estágio */
+  const bt = (id, rot, val, sub) => kpi(rot, val, sub, {sel: id, ativo: PN_SEL === id});
+  el("pn-kpis").innerHTML =
+      bt("prod", "Produzido", rsC(totPer.prod), "receita dos serviços executados no período")
+    + bt("med", "Medido", rsC(totPer.med), "valor revisado, na data da revisão")
+    + bt("fat", "Faturado", rsC(totPer.fat), "valor aprovado, na data da nota")
+    + bt("rec", "Recebido", rsC(totPer.rec), "líquido recebido, na data do pagamento");
+
+  /* ---- a coorte: das medições revisadas DENTRO do recorte, quanto já voltou ----
+     Aqui a linha é a medição, não a obra. Uma medição revisada em março entra em
+     março com todo o seu destino: a nota que ela virou, em qualquer mês, e o
+     dinheiro que ela trouxe, em qualquer mês. É a curva de maturação. */
+  const noRec = d => !inst.atual().datas.size || (!!d && inst.atual().datas.has(d));
+  const dimOk = new Set(semData.map(e => e.ob));
+  const coorte = MED.filter(l => l.data_rev && noRec(l.data_rev)
+                            && (+l.valor_medido_rev || 0) && dimOk.has(obraBase(l.obra)));
+  const cMed = coorte.reduce((a, l) => a + (+l.valor_medido_rev || 0), 0);
+  const cFat = coorte.reduce((a, l) => a + (l.data_nf ? (+l.valor_aprovado || 0) : 0), 0);
+  const cRec = coorte.reduce((a, l) => a + (l.data_recebimento ? (+l.liquido_encargos || 0) : 0), 0);
+  const nFat = coorte.filter(l => l.data_nf).length;
+  const nRec = coorte.filter(l => l.data_recebimento).length;
+
+  el("pn-coorte").innerHTML =
+      bt("coFat", "Do medido no período, já faturado", rsC(cFat),
+         cMed ? `${pct1(cFat/cMed)} do que foi medido · ${nf(nFat)} de ${nf(coorte.length)} medições`
+              : "sem medição no recorte")
+    + bt("coRec", "Do medido no período, já recebido", rsC(cRec),
+         cMed ? `${pct1(cRec/cMed)} do que foi medido · ${nf(nRec)} de ${nf(coorte.length)} medições`
+              : "sem medição no recorte");
+
+  /* o gráfico da maturação, mês do da revisão */
+  const cub = new Map();
+  for(const l of coorte){
+    const k = mes(l.data_rev);
+    const o = cub.get(k) || [0,0,0];
+    o[0] += +l.valor_medido_rev || 0;
+    if(l.data_nf) o[1] += +l.valor_aprovado || 0;
+    if(l.data_recebimento) o[2] += +l.liquido_encargos || 0;
+    cub.set(k, o);
+  }
+  const mc = [...cub.keys()].sort();
+  el("pn-mat").innerHTML = mc.length
+    ? gGrupos(mc.map(m => {
+        const o = cub.get(m), q = o[0] ? o[2]/o[0] : 0;
+        return {rot: rotMes(m), chave: m, vals: o, txts: o.map(v => rsC(v)), delta: null,
+                pilula: {txt: pct1(q),
+                         cor: q > 0.8 ? "var(--pos)" : q > 0.6 ? "#eda100" : "#c0392b"}};
+      }), [{nome:"Medido no mês", cor:"var(--s2)"},
+           {nome:"Dessas, já faturado", cor:"var(--s1)"},
+           {nome:"Dessas, já recebido", cor:"var(--s3)"}],
+      {bw: 20, h: 330, topo: 72, selecao: selDe(pg)})
+    : vazio("Sem medição revisada no recorte.");
+  /* o mês escolhido aqui é o mesmo do gráfico de baixo: os dois acendem juntos
+     e a tabela passa a mostrar só as obras com movimento naquele mês */
+  ligaSel("pn-mat", pg, redesenha(pg));
+  avisoSel("pn-mat", pg, m => MES[+m.slice(5,7)-1] + "/" + m.slice(0,4), redesenha(pg));
+
+  /* ---- os alertas olham a VIDA INTEIRA da obra ---- */
+  const semMed  = obras.filter(o => o.prod > 0 && o.med === 0);
+  const semProd = obras.filter(o => o.med > 0 && o.prod === 0);
+  const vSemMed  = semMed.reduce((a, o) => a + o.prod, 0);
+  const vSemProd = semProd.reduce((a, o) => a + o.med, 0);
+  /* adiantamento faturado no período: o que o cliente adiantou e já virou nota,
+     tenha o dinheiro entrado ou não. Segue a data da nota, como todo faturado. */
+  const ehAdianta = l => l.adiantamento === true || /^(1|true|sim|s|x)$/i.test(String(l.adiantamento || ""));
+  const adiant = MED.filter(l => ehAdianta(l) && l.data_nf && (+l.valor_aprovado || 0)
+                            && noPeriodo.some(e => e.t === "fat" && e.d === l.data_nf && e.ob === obraBase(l.obra)));
+  const vAdiant = adiant.reduce((a, l) => a + (+l.valor_aprovado || 0), 0);
+  const adiantPago = adiant.filter(l => l.data_recebimento).reduce((a, l) => a + (+l.liquido_encargos || 0), 0);
+
+  const obrasAdiant = new Set(adiant.map(l => obraBase(l.obra)));
+  const obrasCoFat = new Set(coorte.filter(l => l.data_nf).map(l => obraBase(l.obra)));
+  const obrasCoRec = new Set(coorte.filter(l => l.data_recebimento).map(l => obraBase(l.obra)));
+  el("pn-alertas").innerHTML =
+      bt("semMed", "⚠️ Produzido e nunca medido", rsC(vSemMed),
+          `${nf(semMed.length)} obras com serviço executado que não tem medição nenhuma`)
+    + bt("semProd", "Medido sem nenhuma produção", rsC(vSemProd),
+          `${nf(semProd.length)} obras medidas sem lançamento de campo em data alguma`)
+    + bt("adiant", "Faturado de adiantamento", rsC(vAdiant),
+          `${nf(adiant.length)} medições de adiantamento já faturadas no período · ${rsC(adiantPago)} já recebido`);
+
+  /* liga os sete cartões uma vez só; clicar de novo no mesmo devolve tudo */
+  for(const alvo of ["pn-kpis", "pn-coorte", "pn-alertas"]){
+    const box = el(alvo);
+    if(box.dataset.ligado) continue;
+    box.dataset.ligado = "1";
+    const escolhe = ev => {
+      const c = ev.target.closest("[data-kpi]");
+      if(!c) return;
+      PN_SEL = (PN_SEL === c.dataset.kpi) ? "" : c.dataset.kpi;
+      PAGINAS[pg]();
+    };
+    box.addEventListener("click", escolhe);
+    box.addEventListener("keydown", ev => {
+      if(ev.key === "Enter" || ev.key === " "){ ev.preventDefault(); escolhe(ev); }
+    });
+  }
+
+  /* ---- o funil, agora da vida inteira das obras do recorte ---- */
+  el("pn-funil").innerHTML = gBarras(ESTAGIOS.map((es, i) => {
+    const v = totVida[es.id], ant = i ? totVida[ESTAGIOS[i-1].id] : 0;
+    return {rot: es.nome, rot2: i ? (ant ? pct1(v/ant) : "—") + " do anterior" : "ponto de partida",
+            val: v, txt: rsC(v), cor: es.cor};
+  }), {bw: 74, gap: 24, h: 290, base: 62,
+       legenda: ESTAGIOS.map(es => ({nome: es.nome, cor: es.cor}))});
+
+  /* ---- mês a mês: quatro acontecimentos, não um funil ---- */
+  const cubo = new Map();
+  for(const e of noPeriodo) cubo.set(mes(e.d) + "|" + e.t, (cubo.get(mes(e.d) + "|" + e.t) || 0) + e.v);
+  const mm = [...new Set(noPeriodo.map(e => mes(e.d)))].sort();
+  el("pn-mes").innerHTML = mm.length
+    ? gGrupos(mm.map(m => {
+        const vs = ESTAGIOS.map(es => cubo.get(m + "|" + es.id) || 0);
+        return {rot: rotMes(m), chave: m, vals: vs, txts: vs.map(v => rsC(v)), delta: null};
+      }), ESTAGIOS.map(es => ({nome: es.nome, cor: es.cor})),
+      {bw: 17, h: 320, topo: 70, selecao: selDe(pg)})
+    : vazio("Sem lançamentos no recorte.");
+  ligaSel("pn-mes", pg, redesenha(pg));
+  avisoSel("pn-mes", pg, m => MES[+m.slice(5,7)-1] + "/" + m.slice(0,4), redesenha(pg));
+
+  /* ---- a tabela, também da vida inteira ---- */
+  const s = selDe(pg);
+  const visivel = o => !s.size || noPeriodo.some(e => e.ob === o.ob && s.has(mes(e.d)));
+  const passaCartao = o => !PN_SEL ? true
+    : PN_SEL === "semMed"  ? (o.prod > 0 && o.med === 0)
+    : PN_SEL === "semProd" ? (o.med > 0 && o.prod === 0)
+    : PN_SEL === "adiant"  ? obrasAdiant.has(o.ob)
+    : PN_SEL === "coFat"   ? obrasCoFat.has(o.ob)
+    : PN_SEL === "coRec"   ? obrasCoRec.has(o.ob)
+    : o[PN_SEL] > 0;
+  const lista = obras.filter(visivel).filter(passaCartao).map(o => ({
+    ...o, r: o.prod ? o.med / o.prod : 0, gap: Math.abs(o.prod - o.med)
+  })).sort((a, b) => b.gap - a.gap);
+
+  const sinal = x => x.prod === 0 ? `<span class="bad bad-a" title="medido sem produção">!</span> `
+    : x.med === 0 ? `<span class="bad bad-v" title="produzido e nunca medido">!</span> `
+    : (x.r < 0.85 || x.r > 1.15) ? `<span class="bad bad-a" title="produção e medição destoam">!</span> ` : "";
+
+  el("pn-tab").innerHTML = tabela(
+    ["Obra", "Cliente", "Período", "Produzido", "Medido", "Medido ÷ Produzido", "Faturado", "Recebido"],
+    lista.map(x => [x.ob, esc(x.cli),
+      brData(x.de).slice(3) + " a " + brData(x.ate).slice(3),
+      rsC(x.prod), rsC(x.med),
+      sinal(x) + (x.prod === 0 ? "sem produção" : x.med === 0 ? "não medido" : nf(x.r, 2)),
+      rsC(x.fat), rsC(x.rec)]),
+    [`Total · ${nf(lista.length)} obras`, "", "",
+     rsC(lista.reduce((a,x)=>a+x.prod,0)), rsC(lista.reduce((a,x)=>a+x.med,0)), "",
+     rsC(lista.reduce((a,x)=>a+x.fat,0)), rsC(lista.reduce((a,x)=>a+x.rec,0))]);
+}
+
+/* ============================================================
    REGISTRO
    ============================================================ */
 const TELAS = {
+  "panorama-geral": pgPanoramaGeral,
   "fin-visao": pgFinVisao, "fin-medicoes": pgFinMedicoes, "fin-fatura": pgFinFatura,
   "fin-receb": pgFinReceb,
   "fin-prog": pgFinProg, "fin-afaturar": pgFinAFaturar, "fin-panorama": pgFinPanorama,
@@ -5659,6 +6114,15 @@ const semBase = pg => () => {
 Object.entries(TELAS).forEach(([pg, fn]) => {
   PAGINAS[pg] = MED.length ? fn : semBase(pg);
 });
+
+/* Este arquivo é injetado DEPOIS do app.js, que já escolheu a página de abertura.
+   Se a página aberta for uma daqui, ela ficou visível mas ainda não foi desenhada,
+   porque naquele instante ela nem existia no registro. Desenha agora. */
+const secAberta = document.querySelector(".pagina.ativa");
+if(secAberta){
+  const id = secAberta.id.replace(/^pg-/, "");
+  if(PAGINAS[id] && TELAS[id]) PAGINAS[id]();
+}
 })();
 
 </script>
