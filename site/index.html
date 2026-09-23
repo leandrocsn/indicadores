@@ -830,38 +830,42 @@ select.sel.mini{padding:5px 8px; font-size:12px}
    continua exatamente como está, embaixo dela.
    ============================================================ */
 body:not(.escolhendo) .apps{display:none}
+/* com a escolha aberta, o painel atrás não rola: uma barra de rolagem só */
+body.escolhendo{overflow:hidden}
 .apps{
   position:fixed; inset:0; z-index:78; overflow-y:auto;
-  display:flex; align-items:center; justify-content:center; padding:48px 24px;
+  display:flex; align-items:center; justify-content:center;
+  padding:clamp(18px,3.4vh,44px) 24px;
   background:
     radial-gradient(1200px 620px at 18% -10%, rgba(26,122,90,.34), transparent 62%),
     radial-gradient(900px 520px at 92% 108%, rgba(26,122,90,.22), transparent 60%),
     #04201a;
 }
 .apps-caixa{width:min(940px,100%); text-align:center; color:#fff}
-.apps-marca{width:168px; height:auto; margin-bottom:30px; filter:drop-shadow(0 2px 16px rgba(0,0,0,.45))}
+.apps-marca{width:clamp(118px,11.5vh,164px); height:auto; margin-bottom:clamp(12px,2.4vh,28px); filter:drop-shadow(0 2px 16px rgba(0,0,0,.45))}
 .apps-eyebrow{
-  margin:0 0 10px; font-family:"IBM Plex Mono",monospace; font-size:9.5px;
+  margin:0 0 clamp(5px,1vh,10px); font-family:"IBM Plex Mono",monospace; font-size:9.5px;
   letter-spacing:.2em; text-transform:uppercase; color:rgba(255,255,255,.55);
 }
 .apps-caixa h1{
-  margin:0 0 10px; font-family:Archivo,sans-serif; font-weight:700;
-  font-size:clamp(26px,3.1vw,40px); letter-spacing:-.03em; line-height:1.1; text-wrap:balance;
+  margin:0 0 9px; font-family:Archivo,sans-serif; font-weight:700;
+  font-size:clamp(22px,2.7vw,36px); letter-spacing:-.03em; line-height:1.1; text-wrap:balance;
 }
-.apps-sub{margin:0 0 34px; font-size:13.5px; color:rgba(255,255,255,.62)}
+.apps-sub{margin:0 0 clamp(16px,3.2vh,32px); font-size:13.5px; color:rgba(255,255,255,.62)}
 
-.apps-grade{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px}
+.apps-grade{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:clamp(10px,1.7vh,16px)}
 .app-card{
   position:relative; text-align:left; cursor:pointer; font:inherit; color:#fff;
-  display:flex; flex-direction:column; gap:9px; padding:24px 22px 22px;
+  display:flex; flex-direction:column; gap:clamp(5px,1vh,9px);
+  padding:clamp(15px,2.3vh,23px) 22px clamp(14px,2.1vh,21px);
   border-radius:18px; border:1px solid rgba(255,255,255,.14);
   background:rgba(255,255,255,.055);
   -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px);
   transition:transform .16s cubic-bezier(.2,.75,.2,1), border-color .16s, background .16s, box-shadow .16s;
 }
-.app-card svg{width:26px; height:26px; color:rgba(255,255,255,.7); transition:color .16s}
-.app-card b{font-family:Archivo,sans-serif; font-size:17px; font-weight:700; letter-spacing:-.02em}
-.app-card span{font-size:12.5px; line-height:1.55; color:rgba(255,255,255,.6)}
+.app-card svg{width:clamp(20px,2.5vh,26px); height:clamp(20px,2.5vh,26px); color:rgba(255,255,255,.7); transition:color .16s}
+.app-card b{font-family:Archivo,sans-serif; font-size:clamp(15px,1.7vh,17px); font-weight:700; letter-spacing:-.02em}
+.app-card span{font-size:clamp(11.5px,1.3vh,12.5px); line-height:1.5; color:rgba(255,255,255,.6)}
 .app-card:hover{
   transform:translateY(-3px); background:rgba(255,255,255,.1);
   border-color:rgba(255,255,255,.3); box-shadow:0 22px 50px -24px rgba(0,0,0,.8);
@@ -876,9 +880,9 @@ body:not(.escolhendo) .apps{display:none}
   text-transform:uppercase; color:#04201a; background:#fff;
   padding:4px 9px; border-radius:20px; font-weight:600;
 }
-.apps-sistema-rot{margin:30px 0 12px; color:rgba(255,255,255,.4)}
-.apps-sistema .app-card{padding:18px 20px}
-.apps-sistema .app-card b{font-size:15px}
+.apps-sistema-rot{margin:clamp(14px,2.6vh,28px) 0 clamp(7px,1.2vh,12px); color:rgba(255,255,255,.4)}
+.apps-sistema .app-card{padding:clamp(12px,1.8vh,18px) 20px}
+.apps-sistema .app-card b{font-size:clamp(14px,1.55vh,15px)}
 /* sem permissão: continua visível, só deixa claro que não abre */
 .app-card[data-bloqueado="1"]{opacity:.42; cursor:not-allowed}
 .app-card[data-bloqueado="1"]:hover{transform:none; background:rgba(255,255,255,.055); border-color:rgba(255,255,255,.14); box-shadow:none}
@@ -886,10 +890,10 @@ body:not(.escolhendo) .apps{display:none}
   position:absolute; top:16px; right:16px; font-size:13px; opacity:.8;
 }
 .apps-aviso{
-  min-height:20px; margin:22px 0 0; font-size:12.5px; color:rgba(255,255,255,.8);
+  min-height:18px; margin:clamp(12px,2vh,20px) 0 0; font-size:12.5px; color:rgba(255,255,255,.8);
 }
 .apps-sair{
-  margin-top:14px; background:none; border:0; cursor:pointer; font:inherit;
+  margin-top:clamp(6px,1.2vh,14px); background:none; border:0; cursor:pointer; font:inherit;
   font-size:12.5px; color:rgba(255,255,255,.5); text-decoration:underline;
   text-underline-offset:3px; padding:6px;
 }
