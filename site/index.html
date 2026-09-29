@@ -1328,12 +1328,12 @@ body.escolhendo{overflow:hidden}
       <div class="grade g2">
         <div class="painel">
           <h2>Preço médio (R$/SEq)</h2>
-          <p>Produção mais diária de equipamento, dividida pelas sequências concluídas.</p>
+          <p>O dinheiro que gerou cada sequência, dividido pelas sequências concluídas. A diária de equipamento só entra no ensaio de integridade, onde ela vira SEq.</p>
           <div class="rolagem-x" id="en-preco"></div>
         </div>
         <div class="painel">
           <h2>Produção (SEq) por mês</h2>
-          <p>Sequências concluídas em cada mês. No ensaio de integridade a sequência vem do valor produzido dividido por R$ 2.000.</p>
+          <p>Sequências concluídas em cada mês. No ensaio de integridade a sequência vem do valor produzido dividido por R$ 2.000. A diária improdutiva e a coluna Outros entram pela mesma conta.</p>
           <div class="rolagem-x" id="en-seq"></div>
         </div>
       </div>
@@ -2903,12 +2903,27 @@ function agrupa(rows, chave, campos){
 const SEQ_PADRAO = 2000;                     // valor de referência de uma sequência
 const vRS      = r => r[RT];                 // produção + diária + outros
 /* no ensaio de integridade a sequência não vem da coluna do painel: é o que se
-   produziu (produção + diária, em reais) dividido pelo valor do SEq padrão */
-const vSeq     = r => P.mod[r[MD]] === "PIT" ? (r[PR] + r[DQ]) / SEQ_PADRAO : r[PS];
+   produziu (produção + diária, em reais) dividido pelo valor do SEq padrão.
+   A diária improdutiva entra em todos os ensaios pela mesma conta: o dia foi
+   cobrado, então vira sequência na mesma proporção (R$ 4.000 = 2 SEq). Nem a
+   coluna Produção (Seq) da planilha nem o produção+diária do PIT trazem a
+   improdutiva, então somar aqui não conta nada duas vezes. A fração é mantida:
+   o arredondamento para inteiro é só na hora de mostrar.
+   A coluna Outros entra pela mesma régua e pelo mesmo motivo: é cobrança do dia
+   que não passou pela coluna de produção. */
+const vSeq     = r => (P.mod[r[MD]] === "PIT" ? (r[PR] + r[DQ]) / SEQ_PADRAO : r[PS])
+                    + (r[IM] + r[OU]) / SEQ_PADRAO;
 const vCapSeq  = r => r[CS];
 const vCapRS   = r => r[CR];
 const vProd    = r => r[PR];                 // só produção
 const vProdDia = r => r[PR] + r[DQ];         // produção + diária de equipamento
+/* numerador do preço médio por SEq: espelho exato do vSeq. Cada sequência nasce
+   de um dinheiro específico, e é só esse dinheiro que pode entrar aqui — por isso
+   a diária de equipamento entra apenas no PIT, que é o único caso em que ela vira
+   sequência. Somar a diária dos outros ensaios inflava o numerador sem mexer no
+   denominador e deixava o preço médio alto demais. Vale só para esse indicador:
+   os gráficos de produção + diária e a capacidade em R$ seguem com vProdDia. */
+const vProdSeq = r => (P.mod[r[MD]] === "PIT" ? r[PR] + r[DQ] : r[PR]) + r[IM] + r[OU];
 
 /* G26116 e G26116-1 são a mesma obra: o que vem depois do hífen só separa cobranças */
 const obraBase = o => String(o || "").split("-")[0].trim();
@@ -3615,7 +3630,7 @@ function pgVisao(){
   el("vs-kpis").innerHTML =
       kpi("Receita total", rs(rt), orc ? `orçado ${rsC(orc)} nos mesmos meses · ${rt>=orc?"+":""}${nf((rt/orc-1)*100,0)}%` : "sem orçamento no recorte")
     + kpi("Produção (SEq)", sq(seq), `capacidade ${sq(cap)} · ${pct(cap ? seq/cap : 0)} de aproveitamento`)
-    + kpi("Preço médio", rs(seq ? soma(rows, vProdDia)/seq : 0) + " / SEq", `${nf(un)} ensaios unitários`);
+    + kpi("Preço médio", rs(seq ? soma(rows, vProdSeq)/seq : 0) + " / SEq", `${nf(un)} ensaios unitários`);
 
   const m = agrupa(rows, r => r[D].slice(0,7), {rs:vRS}).sort((a,b) => a.k.localeCompare(b.k));
   const umAno = new Set(m.map(x => x.k.slice(0,4))).size === 1;
@@ -3783,14 +3798,14 @@ function pgReceitas(){
 /* ---------- ensaios ---------- */
 function pgEnsaios(){
   const rows = comSel("ensaios", LINF, r => r[D].slice(0,7), r => r[D].slice(0,4));
-  const rt = soma(rows, vRS), seq = soma(rows, vSeq), prod = soma(rows, vProdDia);
+  const rt = soma(rows, vRS), seq = soma(rows, vSeq), prod = soma(rows, vProdSeq);
 
   el("en-kpis").innerHTML =
       kpi("Receitas totais", rsC(rt), `${nf(rows.filter(r => r[RT]).length)} lançamentos`)
     + kpi("Produção (SEq)", sq(seq), `${nf(soma(rows, r => r[PU]))} ensaios unitários`)
-    + kpi("Preço médio", rs(seq ? prod/seq : 0) + " / SEq", "produção mais diária, por sequência");
+    + kpi("Preço médio", rs(seq ? prod/seq : 0) + " / SEq", "o que gerou cada sequência, dividido por elas");
 
-  const mes = agrupa(LINF, r => r[D].slice(0,7), {prod:vProdDia, seq:vSeq}).sort((a,b) => a.k.localeCompare(b.k));
+  const mes = agrupa(LINF, r => r[D].slice(0,7), {prod:vProdSeq, seq:vSeq}).sort((a,b) => a.k.localeCompare(b.k));
   const umAno = new Set(mes.map(x => x.k.slice(0,4))).size === 1;
   const rotM = k => MES3[+k.slice(5,7)-1] + (umAno ? "" : "/" + k.slice(2,4));
   el("en-preco").innerHTML = gLinha(mes.filter(m => m.seq > 0).map(m => ({
@@ -3809,7 +3824,7 @@ function pgEnsaios(){
      legenda: [{nome:"Ensaios unitários no ano", cor:"var(--s4)"}]});
   ligaSel("en-hist", "ensaios", pgEnsaios);
 
-  const mods = agrupa(rows, r => nomeMod(r[MD]), {rt:vRS, seq:vSeq, un: r => r[PU], prod:vProdDia})
+  const mods = agrupa(rows, r => nomeMod(r[MD]), {rt:vRS, seq:vSeq, un: r => r[PU], prod:vProdSeq})
                .sort((a,b) => b.rt - a.rt);
   el("en-tab").innerHTML = tabela(["Ensaio","Un.","SEq","R$/SEq","Receita"],
     mods.map(m => [m.k, nf(m.un), sq(m.seq), m.seq ? rs(m.prod/m.seq) : "—", rsC(m.rt)]),
