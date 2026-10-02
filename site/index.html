@@ -134,6 +134,11 @@ select:focus-visible,.btn:focus-visible{outline:2px solid var(--s1); outline-off
 .filtros .btn.limpar{padding:6px 11px; font-size:12.5px}
 
 /* ---------- KPIs ---------- */
+.kpis.so-pessoa{grid-template-columns:repeat(2,1fr)}
+.kpis [data-kpi="ensaios"]{display:none}
+.kpis.so-pessoa [data-kpi="receita"],.kpis.so-pessoa [data-kpi="sobre"],
+.kpis.so-pessoa [data-kpi="media"]{display:none}
+.kpis.so-pessoa [data-kpi="ensaios"]{display:flex}
 .kpis{display:grid; grid-template-columns:repeat(4,1fr); gap:1px; background:var(--line);
       border:1px solid var(--line); border-radius:var(--r); overflow:hidden}
 .kpi{background:var(--surface); padding:16px 18px 15px; display:flex; flex-direction:column; gap:7px}
@@ -166,6 +171,33 @@ select:focus-visible,.btn:focus-visible{outline:2px solid var(--s1); outline-off
           font-size:15px; font-weight:500; letter-spacing:-.02em; display:block; color:var(--ink)}
 .leg .pct{font-size:11.5px; color:var(--ink-3)}
 
+/* ---------- ficha de um colaborador ---------- */
+.ficha{display:flex; flex-direction:column; gap:18px}
+.ficha-topo{display:grid; grid-template-columns:auto 1fr auto; gap:14px; align-items:center;
+            margin:0; padding:0; border:0}
+.ficha-topo h2{font-size:17px}
+.ficha-topo .hint{margin-top:2px}
+.av-g{width:44px; height:44px; font-size:14px}
+.ficha-total{text-align:right; display:flex; flex-direction:column; gap:2px}
+.ficha-total .v{font-family:"IBM Plex Mono",monospace; font-variant-numeric:tabular-nums;
+                font-size:21px; font-weight:500; letter-spacing:-.025em}
+.ficha-kpis{display:grid; grid-template-columns:repeat(auto-fit,minmax(118px,1fr)); gap:12px}
+.ficha-kpis > div{background:var(--surface-2); border:1px solid var(--line); border-radius:8px;
+                  padding:9px 11px; display:flex; flex-direction:column; gap:3px}
+.ficha-kpis .n{font-family:"IBM Plex Mono",monospace; font-variant-numeric:tabular-nums;
+               font-size:16px; font-weight:500; letter-spacing:-.02em}
+.ficha-comp .stack{height:26px; margin-bottom:10px}
+.ficha-leg{display:flex; flex-wrap:wrap; gap:6px 18px; font-size:12px; color:var(--ink-2)}
+.ficha-leg span{display:flex; align-items:center; gap:6px}
+.ficha-leg i{width:9px; height:9px; border-radius:2px; flex:none}
+.ficha-leg b{font-family:"IBM Plex Mono",monospace; font-variant-numeric:tabular-nums;
+             color:var(--ink); font-weight:500}
+.ficha-cols{display:grid; grid-template-columns:1fr 1fr; gap:22px}
+.ficha-h{font-size:11px; letter-spacing:.07em; text-transform:uppercase; color:var(--ink-3);
+         font-weight:600; margin:0 0 11px}
+@media (max-width:860px){ .ficha-cols{grid-template-columns:1fr}
+  .ficha-topo{grid-template-columns:auto 1fr} .ficha-total{grid-column:1/-1; text-align:left} }
+
 /* ---------- equipe ---------- */
 .cols{display:grid; grid-template-columns:1.32fr 1fr; gap:20px; align-items:start}
 .people{display:flex; flex-direction:column; max-height:1040px; overflow-y:auto; padding-right:6px}
@@ -188,11 +220,21 @@ select:focus-visible,.btn:focus-visible{outline:2px solid var(--s1); outline-off
 .exp svg{transition:transform .18s ease}
 .exp[aria-expanded="true"]{color:var(--s1)}
 .exp[aria-expanded="true"] svg{transform:rotate(180deg)}
+/* o detalhe cabe inteiro na largura do painel: sem rolagem lateral.
+   A obra pode quebrar em duas linhas; data e equipamento continuam inteiros. */
 .det{grid-column:1/-1; margin-top:12px; background:var(--surface-2);
-     border:1px solid var(--line); border-radius:8px; padding:12px 14px 10px; overflow-x:auto}
-.det table{font-size:11.5px; min-width:480px}
+     border:1px solid var(--line); border-radius:8px; padding:12px 14px 10px}
+.det table{font-size:11.5px; width:100%; table-layout:fixed}
 .det th{padding:0 0 7px; font-size:9.5px}
-.det th.l,.det td.l{text-align:left; white-space:nowrap; padding-right:13px}
+.det th.l,.det td.l{text-align:left; padding-right:11px; white-space:normal; word-break:break-word}
+.det th.dia,.det td.dia{white-space:nowrap}
+.det col.c-dia{width:46px}
+.det col.c-eq{width:14%}
+.det col.c-ens{width:11%}
+.det col.c-qt{width:42px}
+.det col.c-vl{width:27%}
+.det td.mono{word-break:break-word; white-space:normal}
+.det .km{white-space:normal}
 .det td{padding:5px 0; border-bottom:1px solid var(--line)}
 .det tr:last-child td{border-bottom:0}
 .det .aj td{color:var(--ink-3)}
@@ -1994,6 +2036,18 @@ body.escolhendo{overflow:hidden}
         </div>
       </div>
     </div>
+    <div class="fdrop larga" data-k="colab">
+      <label class="eyebrow">Colaborador</label>
+      <button class="fbtn" type="button" aria-expanded="false"><span class="fres">Todos</span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <div class="fpop" hidden>
+        <input class="fbusca" type="search" placeholder="Buscar…" aria-label="Buscar em Colaborador">
+        <div class="flista"></div>
+        <div class="facoes">
+          <button type="button" data-acao="tudo">Selecionar tudo</button>
+          <button type="button" data-acao="limpar">Limpar</button>
+        </div>
+      </div>
+    </div>
     <div class="fgrupo fim">
       <span class="eyebrow" id="f-contagem"></span>
       <button class="btn limpar" id="f-limpar" type="button">Limpar filtros</button>
@@ -2001,6 +2055,8 @@ body.escolhendo{overflow:hidden}
   </div>
 
   <div class="kpis" id="kpis"></div>
+
+  <section class="panel ficha" id="ficha" hidden></section>
 
   <section class="panel">
     <header>
@@ -2333,21 +2389,125 @@ function iniciais(nome){
   return ((p[0]?.[0]||"") + (p[p.length-1]?.[0]||"")).toUpperCase();
 }
 
+/* ---------- ficha de um colaborador ----------
+   Só aparece quando exatamente um nome está selecionado no filtro. Tudo aqui sai
+   das linhas da própria pessoa: nada de rateio nem de estimativa. */
+function ficha(p){
+  const soma = (arr, f) => arr.reduce((a,r) => a + (f(r) || 0), 0);
+  const prod = soma(p.linhas, r => r.gp) + soma(p.linhas, r => r.bo);
+  const desl = soma(p.linhas, r => r.de);
+  const gar  = soma(p.linhas.filter(r => /Garantia|mínimo/i.test(r.tp)), r => r.tt);
+  const com  = soma(p.linhas.filter(r => /Comiss/i.test(r.tp)), r => r.tt);
+  const outros = p.total - prod - desl - gar - com;
+
+  const comp = [
+    {nome:"Produção",            v:prod,   c:"var(--s1)"},
+    {nome:"Deslocamento",        v:desl,   c:"var(--s2)"},
+    {nome:"Garantias e mínimos", v:gar,    c:"var(--s3)"},
+    {nome:"Supervisão (5%)",     v:com,    c:"var(--s4)"},
+    {nome:"Outros",              v:outros, c:"var(--ink-3)"}
+  ].filter(x => Math.abs(x.v) > 0.005);
+
+  /* por ensaio: quantidade e quanto aquilo rendeu */
+  const porServ = new Map();
+  p.linhas.filter(r => r.tp === "Produção" && r.sv).forEach(r => {
+    const a = porServ.get(r.sv) || {q:0, v:0};
+    a.q += r.q || 0; a.v += (r.gp || 0) + (r.bo || 0);
+    porServ.set(r.sv, a);
+  });
+  const servs = [...porServ.entries()].map(([k,a]) => ({k, ...a})).sort((a,b) => b.v - a.v);
+
+  /* obras em que atuou */
+  const porObra = new Map();
+  p.linhas.filter(r => r.cl).forEach(r => {
+    const k = r.cl + "||" + obraBase(r.ob);
+    const a = porObra.get(k) || {cl:r.cl, ob:obraBase(r.ob), v:0, dias:new Set()};
+    a.v += r.tt || 0; if(r.dt && r.tp === "Produção") a.dias.add(r.dt);
+    porObra.set(k, a);
+  });
+  const obrasTodas = [...porObra.values()].sort((a,b) => b.v - a.v);
+  /* lista longa demais estica a ficha sem acrescentar leitura: as dez maiores
+     e uma linha juntando o resto */
+  const obras = obrasTodas.slice(0, 10);
+  const restoObras = obrasTodas.slice(10);
+
+  const dias = p.dias.size;
+  const equipes = new Set(p.linhas.filter(r => r.mq).map(r => r.mq));
+  const maxS = servs[0] ? servs[0].v : 1;
+  const maxO = obrasTodas[0] ? obrasTodas[0].v : 1;
+  const ini = p.nome.split(" ").filter(Boolean);
+  const sigla = ((ini[0] || "")[0] || "") + ((ini[ini.length-1] || "")[0] || "");
+
+  return `
+    <header class="ficha-topo">
+      <span class="av av-g">${sigla.toUpperCase()}</span>
+      <div>
+        <h2>${p.nome}</h2>
+        <p class="hint">${p.cargo || "sem cargo cadastrado"}${p.funcao ? " · " + p.funcao : ""}
+           — resumo do recorte selecionado nos filtros.</p>
+      </div>
+      <span class="ficha-total">
+        <span class="eyebrow">Total no recorte</span>
+        <span class="v">${moeda(p.total, 2)}</span>
+      </span>
+    </header>
+
+    <div class="ficha-kpis">
+      <div><span class="eyebrow">Dias de campo</span><span class="n">${brl0(dias)}</span></div>
+      <div><span class="eyebrow">Média por dia</span><span class="n">R$ ${brl(dias ? p.total/dias : 0)}</span></div>
+      <div><span class="eyebrow">Obras</span><span class="n">${brl0(obrasTodas.length)}</span></div>
+      <div><span class="eyebrow">Equipamentos</span><span class="n">${brl0(equipes.size)}</span></div>
+      <div><span class="eyebrow">Lançamentos</span><span class="n">${brl0(p.linhas.length)}</span></div>
+    </div>
+
+    <div class="ficha-comp">
+      <div class="stack">${comp.map(x => `<div style="width:${Math.max(0,x.v)/(p.total||1)*100}%; background:${x.c}" title="${x.nome}"></div>`).join("")}</div>
+      <div class="ficha-leg">${comp.map(x => `
+        <span><i style="background:${x.c}"></i>${x.nome}
+          <b>R$ ${brl(x.v)}</b></span>`).join("")}</div>
+    </div>
+
+    <div class="ficha-cols">
+      <div>
+        <h3 class="ficha-h">Por ensaio</h3>
+        ${servs.length ? `<div class="blist">${servs.map(x => `
+          <div class="brow">
+            <span class="n" title="${porExtenso(x.k)}">${SERVICOS[x.k] || x.k}</span>
+            <span class="v">${brl0(x.q)} un · R$ ${brl(x.v)}</span>
+            <span class="track"><i style="width:${x.v/maxS*100}%"></i></span>
+          </div>`).join("")}</div>` : `<p class="hint">Nenhum ensaio com quantidade no recorte.</p>`}
+      </div>
+      <div>
+        <h3 class="ficha-h">Onde trabalhou</h3>
+        <div class="blist">${obras.map(x => `
+          <div class="brow alt">
+            <span class="n" title="${x.ob}">${x.cl}</span>
+            <span class="v">${x.dias.size ? brl0(x.dias.size) + (x.dias.size === 1 ? " dia · " : " dias · ") : ""}R$ ${brl(x.v)}</span>
+            <span class="track"><i style="width:${Math.max(0,x.v)/maxO*100}%"></i></span>
+          </div>`).join("")}${restoObras.length ? `
+          <div class="brow alt">
+            <span class="n">+ outras ${brl0(restoObras.length)} obras</span>
+            <span class="v">R$ ${brl(restoObras.reduce((a,x)=>a+x.v, 0))}</span>
+          </div>` : ""}</div>
+      </div>
+    </div>`;
+}
+
 function detalhe(p){
   const dia = s => s ? s.slice(8,10) + "/" + s.slice(5,7) : "—";
   const rs = p.linhas.slice().sort((a,b) => (a.dt || "9999").localeCompare(b.dt || "9999"));
   const linhas = rs.map(r => {
     if(r.tp !== "Produção") return `
       <tr class="aj">
-        <td class="l mono">${dia(r.dt)}</td>
-        <td class="l" colspan="4">${r.tp}</td>
+        <td class="l dia mono">${dia(r.dt)}</td>
+        <td class="l obra" colspan="4">${r.tp}</td>
         <td class="mono">${r.tt ? brl(r.tt) : "—"}</td>
       </tr>`;
     const extra = r.de ? `<span class="km">inclui R$ ${brl(r.de)} de deslocamento${r.km ? ` · ${brl0(r.km)} km` : ""}</span>` : "";
     return `
       <tr>
-        <td class="l mono">${dia(r.dt)}</td>
-        <td class="l"><b>${r.cl || "—"}</b>${r.ci ? `<span class="km">${r.ci}</span>` : ""}</td>
+        <td class="l dia mono">${dia(r.dt)}</td>
+        <td class="l obra"><b>${r.cl || "—"}</b>${r.ci ? `<span class="km">${r.ci}</span>` : ""}</td>
         <td class="l mono">${r.mq || "—"}</td>
         <td class="l" title="${porExtenso(r.sv)}">${SERVICOS[r.sv] || r.sv || "—"}</td>
         <td class="mono">${r.q ? brl0(r.q) : "—"}</td>
@@ -2355,8 +2515,9 @@ function detalhe(p){
       </tr>`;
   }).join("");
   return `<table>
+    <colgroup><col class="c-dia"><col><col class="c-eq"><col class="c-ens"><col class="c-qt"><col class="c-vl"></colgroup>
     <thead><tr>
-      <th class="l">Data</th><th class="l">Obra</th><th class="l">Equip.</th>
+      <th class="l dia">Data</th><th class="l obra">Obra</th><th class="l">Equip.</th>
       <th class="l">Ensaio</th><th>Qtd</th><th>Valor R$</th>
     </tr></thead>
     <tbody>${linhas}
@@ -2371,8 +2532,22 @@ const SETA = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-h
 function render(rows, rotulo){
   const d = calcular(rows);
 
+  /* com um colaborador filtrado, a receita deixa de ser legível: ela pertence ao
+     serviço, não à pessoa, e as obras dele quase sempre tinham mais gente junto.
+     Os dois cartões que dependem dela saem de cena. */
+  const umSo = F.colab.size === 1;
+  el("kpis").classList.toggle("so-pessoa", umSo);
+
+  /* com um nome filtrado, o cartão da média vira o total de ensaios dele:
+     a média de um colaborador só repetiria o valor do cartão ao lado */
+  const unPorSv = new Map();
+  rows.filter(r => r.tp === "Produção" && r.q > 0)
+      .forEach(r => unPorSv.set(r.sv, (unPorSv.get(r.sv) || 0) + r.q));
+  const unTotal = [...unPorSv.values()].reduce((a,x) => a + x, 0);
+  const svTop = [...unPorSv.entries()].sort((a,b) => b[1] - a[1])[0];
+
   el("kpis").innerHTML = `
-    <div class="kpi">
+    <div class="kpi" data-kpi="receita">
       <span class="eyebrow">Receita do período</span>
       <span class="v">${moeda(d.receita, 0)}</span>
       <span class="sub">${d.linhas} lançamentos · ${d.obras} obras</span>
@@ -2380,14 +2555,20 @@ function render(rows, rotulo){
     <div class="kpi">
       <span class="eyebrow">Gratificação paga</span>
       <span class="v">${moeda(d.total, 2)}</span>
-      <span class="sub">${d.pessoas.length} colaboradores · ${d.dias} dias de campo</span>
+      <span class="sub">${d.pessoas.length} ${d.pessoas.length === 1 ? "colaborador" : "colaboradores"} · ${d.dias} ${d.dias === 1 ? "dia" : "dias"} de campo</span>
     </div>
-    <div class="kpi hero">
+    <div class="kpi hero" data-kpi="sobre">
       <span class="eyebrow">Sobre a receita</span>
       <span class="v">${pct(d.perc)}</span>
       <span class="sub">de cada R$ 100 faturados, R$ ${brl(d.perc)} voltam à equipe</span>
     </div>
-    <div class="kpi">
+    <div class="kpi" data-kpi="ensaios">
+      <span class="eyebrow">Ensaios realizados</span>
+      <span class="v">${brl0(unTotal)}</span>
+      <span class="sub">${unPorSv.size ? `unidades em ${unPorSv.size} ${unPorSv.size === 1 ? "modalidade" : "modalidades"}`
+        + (svTop ? ` · maior: ${SERVICOS[svTop[0]] || svTop[0]} (${brl0(svTop[1])})` : "") : "nenhum ensaio com quantidade"}</span>
+    </div>
+    <div class="kpi" data-kpi="media">
       <span class="eyebrow">Média por colaborador</span>
       <span class="v">${moeda(d.pessoas.length ? d.total/d.pessoas.length : 0, 2)}</span>
       <span class="sub">maior: ${d.pessoas[0] ? d.pessoas[0].nome.split(" ")[0] + ", R$ " + brl(d.pessoas[0].total) : "—"}</span>
@@ -2467,6 +2648,11 @@ function render(rows, rotulo){
   el("servicos").innerHTML = barras(d.servicos, false);
   el("maquinas").innerHTML = barras(d.maquinas.slice(0,8), true);
 
+  const sel = [...F.colab];
+  const pSel = sel.length === 1 ? d.pessoas.find(x => x.nome === sel[0]) : null;
+  el("ficha").hidden = !pSel;
+  el("ficha").innerHTML = pSel ? ficha(pSel) : "";
+
   el("equipe-hint").textContent =
     `${d.pessoas.length} colaboradores no período. A seta abaixo da foto abre o detalhe dos lançamentos.`;
 
@@ -2527,7 +2713,7 @@ const NOME_MES = ["janeiro","fevereiro","março","abril","maio","junho",
 
 // conjunto vazio = sem filtro (tudo)
 const F = {periodo:new Set(), datas:new Set(), cliente:new Set(), obra:new Set(),
-           equip:new Set(), servico:new Set()};
+           equip:new Set(), servico:new Set(), colab:new Set()};
 
 const abertos = new Set();     // nós da árvore de datas expandidos
 let popAberto = null;          // qual dropdown está aberto
@@ -2544,7 +2730,9 @@ const DIM = {
   obra:    {rot:"Nº da obra",            val:r => obraBase(r.ob),  ord:alfa, busca:true},
   equip:   {rot:"Equipamento",           val:r => r.mq,            ord:alfa, busca:true},
   servico: {rot:"Ensaio",                val:r => r.sv,            ord:alfa, busca:false,
-            lbl:v => `${SERVICOS[v] || v} — ${porExtenso(v)}`, curto:v => SERVICOS[v] || v}
+            lbl:v => `${SERVICOS[v] || v} — ${porExtenso(v)}`, curto:v => SERVICOS[v] || v},
+  colab:   {rot:"Colaborador",           val:r => r.co,            ord:alfa, busca:true,
+            curto:v => String(v).split(" ")[0]}
 };
 
 function passa(r, exceto){
