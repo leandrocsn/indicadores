@@ -3023,7 +3023,8 @@ const el = id => document.getElementById(id);
 
 /* ---------- índice das colunas de PROD.linhas ---------- */
 const D=0, MQ=1, OB=2, CL=3, CI=4, MD=5, PU=6, CS=7, PS=8, CR=9,
-      PR=10, DQ=11, TR=12, MB=13, DB=14, IG=15, ED=16, OU=17, HE=18, RT=19, IM=20;
+      PR=10, DQ=11, TR=12, MB=13, DB=14, IG=15, ED=16, OU=17, HE=18, RT=19, IM=20,
+      DIE=21, ALI=22, HOS=23;   /* diesel, alimentação e hospedagem: colunas novas, no fim */
 
 const P = PROD;
 const LIN = P.linhas;
@@ -3948,7 +3949,12 @@ const TIPOS = [
   {nome:"Mob / Desmob equipe",      f: r => r[MB] + r[DB]},
   {nome:"Diária de integração",     f: r => r[IG]},
   {nome:"Elaboração de documentos", f: r => r[ED]},
-  {nome:"Horas-extra",              f: r => r[HE]},
+  {nome:"Horas",                    f: r => r[HE]},
+  /* as três chegam juntas numa categoria só: separadas deixariam a tabela com 13
+     colunas. Os valores seguem guardados em separado, se um dia precisar abrir.
+     O || 0 cobre os pacotes gravados antes destas colunas existirem. */
+  {nome:"Diesel, alimentação e hospedagem",
+                                    f: r => (r[DIE] || 0) + (r[ALI] || 0) + (r[HOS] || 0)},
   {nome:"Outros",                   f: r => r[OU]},
 ];
 function pgReceitas(){
@@ -4435,7 +4441,8 @@ const COLS_CONS = ["Data", "Máquina", "Nº Obra", "Nome Obra", "Endereço", "Mo
   "Produção (un.)", "Capacidade Produtiva (Seq)", "Produção (Seq)", "Capacidade Produtiva (R$)",
   "Produção (R$)", "Produção + Diária", "Transporte (R$)", "Mob. Equipe (R$)",
   "Desmob. Equipe (R$)", "Diária de Integração (R$)", "Elaboração de Documentos (R$)",
-  "Outros (R$)", "Horas-extra (R$)", "Receita Total", "Diária Improdutiva (R$)"];
+  "Outros (R$)", "Horas (R$)", "Receita Total", "Diária Improdutiva (R$)",
+  "Diesel (R$)", "Alimentação (R$)", "Hospedagem (R$)"];
 const COLS_FECH = Object.keys(DE_PARA_F);
 const COLS_ORS  = ["Data", "Tipo de Ensaio", "Receita Total"];
 const COLS_OSQ  = ["Modalidade", "Mês", "Seq's"];
@@ -4506,8 +4513,10 @@ function montaProd(consBr, orcRsBr, orcSqBr){
         r2(g("Capacidade Produtiva (R$)")), r2(prod), r2(pdia - prod),
         r2(g("Transporte (R$)")), r2(g("Mob. Equipe (R$)")), r2(g("Desmob. Equipe (R$)")),
         r2(g("Diária de Integração (R$)")), r2(g("Elaboração de Documentos (R$)")),
-        r2(g("Outros (R$)")), r2(g("Horas-extra (R$)")), r2(rt),
-        r2(g("Diária Improdutiva (R$)"))]);
+        r2(g("Outros (R$)")), r2(g("Horas (R$)")), r2(rt),
+        r2(g("Diária Improdutiva (R$)")),
+        /* colunas novas entram no fim: nenhuma posição anterior se move */
+        r2(g("Diesel (R$)")), r2(g("Alimentação (R$)")), r2(g("Hospedagem (R$)"))]);
     }
   }else{
     /* sem planilha nova de produção, o conjunto atual segue igual */
