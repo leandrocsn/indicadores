@@ -5921,16 +5921,28 @@ async function carregaDePara(){
 }
 
 /* ---------- gravação ---------- */
-async function idsExistentes(ids){
-  const achados = new Set();
+/* devolve o que já está gravado, e não só os números, para o complemento
+   poder tocar apenas no que de fato está faltando */
+async function jaGravados(ids){
+  const achados = new Map();
   for(let i = 0; i < ids.length; i += 400){
     const fatia = ids.slice(i, i + 400);
     const {data, error} = await SB.from("pag_lancamentos")
-      .select("extrato_id").in("extrato_id", fatia);
+      .select("extrato_id,cod_class,centro_custo,ramo,comprovantes").in("extrato_id", fatia);
     if(error) throw error;
-    (data || []).forEach(r => achados.add(r.extrato_id));
+    (data || []).forEach(r => achados.set(r.extrato_id, r));
   }
   return achados;
+}
+
+/* ATENÇÃO, para quem mexer nisto depois: nunca usar upsert com só algumas
+   colunas numa tabela que tenha coluna NOT NULL sem valor padrão. O Postgres
+   monta a linha do INSERT e confere as restrições ANTES de perceber que era
+   para atualizar — e recusa por «nome» ou «data» nulos. Para completar linha
+   que já existe, use UPDATE. */
+async function atualizaUma(tabela, chave, valor, campos){
+  const {error} = await SB.from(tabela).update(campos).eq(chave, valor);
+  if(error) throw error;
 }
 async function gravaEmLotes(tabela, linhas, conflito, tamanho){
   let n = 0;
@@ -6182,10 +6194,11 @@ async function gravar(){
         if(l.cod_class && dp.contas.has(l.cod_class)) l.plano_contas = l.cod_class;
         else if(l.cod_class) conta.semConta.add(l.cod_class);
       }
-      /* devolve ao cadastro o número de conta aprendido agora */
-      if(aprender.size){
-        await gravaEmLotes("pag_colaboradores",
-          [...aprender].map(([cpf, c]) => ({cpf, conta: c})), "cpf");
+      /* devolve ao cadastro o número de conta aprendido agora.
+         UPDATE, não upsert: a pessoa já existe e o upsert exigiria o nome. */
+      for(const [cpf, c] of aprender){
+        try{ await atualizaUma("pag_colaboradores", "cpf", cpf, {conta: c}); }
+        catch(e){ /* conta é conveniência: se falhar, a busca segue pelo nome */ }
       }
       /* centros de custo novos entram na tabela, sem equipamento, para você ligar */
       if(conta.semCentro.size){
@@ -6193,20 +6206,30 @@ async function gravar(){
           [...conta.semCentro].map(c => ({centro: c})), "centro");
       }
       diz(`Conferindo ${inte(linhas.length)} lançamentos…`);
-      const jaTem = await idsExistentes(linhas.map(l => l.extrato_id));
+      const jaTem = await jaGravados(linhas.map(l => l.extrato_id));
       const novos = linhas.filter(l => !jaTem.has(l.extrato_id));
-      /* o que já existe só recebe os campos do PagCorp — nunca os manuais */
-      const velhos = linhas.filter(l => jaTem.has(l.extrato_id)).map(l => ({
-        extrato_id: l.extrato_id, cod_class: l.cod_class || "",
-        centro_custo: l.centro_custo || "", ramo: l.ramo || "",
-        fotos: l.fotos || [], comprovantes: l.comprovantes || 0,
-        status: l.status || "",
-      }));
 
-      /* obras citadas que ainda não existem entram no cadastro */
+      /* o que já existe só é tocado quando o relatório traz algo que o banco
+         ainda não tem — e campo por campo, nunca os preenchidos à mão */
+      const completar = [];
+      for(const l of linhas){
+        const velho = jaTem.get(l.extrato_id);
+        if(!velho) continue;
+        const faltas = {};
+        if(!txt(velho.cod_class)    && l.cod_class)    faltas.cod_class    = l.cod_class;
+        if(!txt(velho.centro_custo) && l.centro_custo) faltas.centro_custo = l.centro_custo;
+        if(!txt(velho.ramo)         && l.ramo)         faltas.ramo         = l.ramo;
+        if(!velho.comprovantes      && l.comprovantes) faltas.comprovantes = l.comprovantes;
+        if(Object.keys(faltas).length) completar.push({id: l.extrato_id, faltas});
+      }
+
       diz("Gravando lançamentos…");
-      if(novos.length)  conta.novos       = await gravaEmLotes("pag_lancamentos", novos,  "extrato_id");
-      if(velhos.length) conta.atualizados = await gravaEmLotes("pag_lancamentos", velhos, "extrato_id");
+      if(novos.length) conta.novos = await gravaEmLotes("pag_lancamentos", novos, "extrato_id");
+      for(let i = 0; i < completar.length; i++){
+        if(i % 25 === 0) diz(`Completando ${i + 1} de ${inte(completar.length)}…`);
+        await atualizaUma("pag_lancamentos", "extrato_id", completar[i].id, completar[i].faltas);
+        conta.atualizados++;
+      }
     }
 
     L.carregado = false;          // as telas precisam ser relidas
@@ -6226,7 +6249,7 @@ async function relatorio(alvo, conta, linhas){
   if(conta.contas) partes.push(`${inte(conta.contas)} contas do plano`);
   if(conta.equip)  partes.push(`${inte(conta.equip)} equipamentos`);
   if(conta.novos)  partes.push(`<b>${inte(conta.novos)} lançamentos novos</b>`);
-  if(conta.atualizados) partes.push(`${inte(conta.atualizados)} já existiam e foram completados`);
+  if(conta.atualizados) partes.push(`${inte(conta.atualizados)} completados com o que faltava`);
 
   let alerta = "";
   if(conta.semCadastro && conta.semCadastro.size)
