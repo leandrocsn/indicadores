@@ -5522,6 +5522,376 @@ if(document.readyState === "loading") document.addEventListener("DOMContentLoade
 else monta();
 })();
 </script>
+<script type="text/plain" id="js-margem">
+/* ============================================================
+   MARGEM DE OBRA — custos padrão.
+   Entra como uma seção na Atualização de dados, onde mora o resto da
+   configuração. Aqui você confere e corrige os preços; o cálculo da
+   margem em si fica na página Margem teórica, e vem depois.
+   Só administrador vê.
+   ============================================================ */
+(() => {
+const el = id => document.getElementById(id);
+const SB = window.SB;
+if(!SB) return;
+if(!(window.PERFIL && window.PERFIL.papel === "admin")) return;
+
+const brl  = n => (n === null || n === undefined || n === "" ? ""
+                 : Number(n).toLocaleString("pt-BR", {minimumFractionDigits: 2, maximumFractionDigits: 2}));
+const inte = n => (n || 0).toLocaleString("pt-BR", {maximumFractionDigits: 0});
+const txt  = v => v === null || v === undefined ? "" : String(v).trim();
+const esc  = s => txt(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const chave = s => txt(s).normalize("NFD").replace(/[̀-ͯ]/g, "").toUpperCase();
+
+const porque = e => {
+  const m = String((e && (e.message || e.details)) || e || "").toLowerCase();
+  if(m.includes("does not exist") || m.includes("schema cache"))
+    return "as tabelas da margem ainda não existem — rode o supabase-margem.sql";
+  if(m.includes("row-level security") || m.includes("permission"))
+    return "o banco recusou: esta tela é restrita ao administrador";
+  if(m.includes("duplicate key")) return "já existe uma linha igual (mesmo tipo, máquina, região e vigência)";
+  if(m.includes("failed to fetch") || m.includes("network")) return "sem conexão com o servidor";
+  return (e && (e.message || e.details)) || String(e);
+};
+
+/* ---------- as cinco tabelas ---------- */
+const M = {atual: "custos", dados: {}, busca: "", eqs: []};
+
+const TAB = {
+  custos: {
+    rotulo: "Custos padrão", tabela: "margem_custos", chave: "id", ordem: "tipo",
+    campos: [
+      {c: "tipo",          t: "Tipo",          larg: "17%", obrig: true},
+      {c: "classificacao", t: "Classificação", larg: "16%"},
+      {c: "parametro",     t: "Parâmetro",     larg: "19%"},
+      {c: "maquina",       t: "Máquina",       larg: "12%", tipo: "eq",
+       dica: "vazio = todas"},
+      {c: "regiao",        t: "Região",        larg: "13%", tipo: "lista",
+       opcoes: ["", "REGIÃO METROPOLITANA", "FORA DA RMBH", "SP"]},
+      {c: "valor",         t: "Valor (R$)",    larg: "9%",  tipo: "num", obrig: true},
+      {c: "vigora_de",     t: "Vale a partir", larg: "11%", tipo: "data"},
+    ],
+  },
+  equipamentos: {
+    rotulo: "Equipamentos", tabela: "margem_equipamentos", chave: "nome", ordem: "nome",
+    campos: [
+      {c: "nome",           t: "Nome", larg: "22%", obrig: true, trava: true},
+      {c: "modalidade",     t: "Modalidade", larg: "30%"},
+      {c: "equipe_padrao",  t: "Equipe padrão", larg: "12%", tipo: "num",
+       dica: "pessoas"},
+      {c: "vai_no_veiculo", t: "Vai no veículo", larg: "12%", tipo: "bool"},
+      {c: "ativo",          t: "Ativo", larg: "8%", tipo: "bool"},
+    ],
+  },
+  transporte: {
+    rotulo: "Transporte do equipamento", tabela: "margem_transporte", chave: "maquina", ordem: "maquina",
+    campos: [
+      {c: "maquina",     t: "Máquina",        larg: "17%", obrig: true, trava: true},
+      {c: "rs_km",       t: "R$/km",          larg: "10%", tipo: "num"},
+      {c: "fixo",        t: "Fixo (R$)",      larg: "10%", tipo: "num"},
+      {c: "limite_km",   t: "Acima de (km)",  larg: "12%", tipo: "num"},
+      {c: "rs_km_acima", t: "R$/km acima",    larg: "11%", tipo: "num"},
+      {c: "fixo_acima",  t: "Fixo acima (R$)",larg: "12%", tipo: "num"},
+      {c: "observacao",  t: "Observação",     larg: "20%"},
+    ],
+  },
+  distancias: {
+    rotulo: "Distâncias", tabela: "margem_distancias", chave: "cidade", ordem: "cidade",
+    campos: [
+      {c: "cidade",         t: "Cidade",   larg: "30%", obrig: true, trava: true},
+      {c: "km",             t: "KM de Contagem", larg: "13%", tipo: "num"},
+      {c: "origem_calculo", t: "Origem",   larg: "12%", tipo: "lista", opcoes: ["api","manual"]},
+      {c: "erro",           t: "Erro",     larg: "30%", trava: true},
+    ],
+  },
+  avulsos: {
+    rotulo: "Avulsos", tabela: "margem_avulsos", chave: "id", ordem: "num_obra",
+    campos: [
+      {c: "num_obra",  t: "Nº Obra",   larg: "14%", obrig: true},
+      {c: "data",      t: "Data",      larg: "13%", tipo: "data"},
+      {c: "descricao", t: "Descrição", larg: "45%"},
+      {c: "valor",     t: "Valor (R$)",larg: "12%", tipo: "num", obrig: true},
+    ],
+  },
+};
+
+async function carrega(qual){
+  const d = TAB[qual];
+  const {data, error} = await SB.from(d.tabela).select("*").order(d.ordem).limit(3000);
+  if(error) throw error;
+  M.dados[qual] = data || [];
+  if(qual === "equipamentos") M.eqs = (data || []).map(r => r.nome);
+}
+
+/* ---------- a seção dentro da Atualização de dados ---------- */
+function monta(){
+  const pag = el("pg-dados");
+  if(!pag || el("mg-bloco")) return;
+  const pub = pag.querySelector(".publicar");
+  if(!pub) return;
+  const caixa = document.createElement("div");
+  caixa.id = "mg-bloco";
+  caixa.innerHTML = ESTILO + `
+    <h2 class="bloco-t">Margem de obra — custos padrão</h2>
+    <p class="bloco-p">Os preços que alimentam a margem teórica. Mudou o diesel? Muda aqui
+       e todas as obras recalculam. <b>Vale a partir</b> congela o passado: alterar hoje
+       não mexe na margem de uma obra de março. Grava na hora, sem botão de salvar.</p>
+    <div class="painel">
+      <div class="mg-topo">
+        <div class="mg-abas">${Object.entries(TAB).map(([k, v]) =>
+          `<button class="mg-aba${k === M.atual ? " ativa" : ""}" type="button"
+             data-mg="${k}">${v.rotulo}</button>`).join("")}</div>
+        <input class="mg-busca" id="mg-busca" type="search" placeholder="Procurar…">
+      </div>
+      <p class="mg-resumo" id="mg-resumo"></p>
+      <div class="mg-acoes" id="mg-acoes"></div>
+      <div class="mg-tabela" id="mg-tabela"></div>
+      <p class="mg-msg" id="mg-msg"></p>
+    </div>`;
+  pub.parentNode.insertBefore(caixa, pub);
+
+  caixa.querySelectorAll("[data-mg]").forEach(b => {
+    b.onclick = async () => {
+      M.atual = b.dataset.mg; M.busca = "";
+      caixa.querySelectorAll(".mg-aba").forEach(x => x.classList.toggle("ativa", x === b));
+      el("mg-busca").value = "";
+      await abre();
+    };
+  });
+  el("mg-busca").oninput = () => { M.busca = el("mg-busca").value; pinta(); };
+  abre();
+}
+
+async function abre(){
+  const alvo = el("mg-tabela");
+  alvo.innerHTML = `<p class="mg-vazio">Carregando…</p>`;
+  try{
+    if(!M.dados[M.atual]) await carrega(M.atual);
+    if(!M.eqs.length && !M.dados.equipamentos) await carrega("equipamentos");
+    pinta();
+  }catch(e){ alvo.innerHTML = `<p class="mg-vazio">Não consegui carregar: ${esc(porque(e))}.</p>`; }
+}
+
+function celula(d, r, campo, novo){
+  const v = r ? r[campo.c] : (campo.c === "vigora_de" || campo.c === "data"
+                              ? new Date().toISOString().slice(0, 10) : "");
+  const id = r ? r[d.chave] : "";
+  const base = `data-mgc="${campo.c}" data-mgi="${esc(id)}"` + (novo ? ` data-mgn="1"` : "");
+  const trava = campo.trava && !novo ? " readonly" : "";
+  if(campo.tipo === "bool")
+    return `<input type="checkbox" ${base} ${v === false ? "" : (v || novo ? "checked" : "")}>`;
+  if(campo.tipo === "lista")
+    return `<select ${base}>${campo.opcoes.map(o =>
+      `<option value="${esc(o)}"${o === (v || "") ? " selected" : ""}>${esc(o) || "— todas —"}</option>`).join("")}</select>`;
+  if(campo.tipo === "eq")
+    return `<input ${base} list="mg-eqs" value="${esc(v == null ? "" : v)}"${trava}`
+         + (campo.dica ? ` placeholder="${esc(campo.dica)}"` : "") + `>`;
+  const tipo = campo.tipo === "num" ? "number" : (campo.tipo === "data" ? "date" : "text");
+  const passo = campo.tipo === "num" ? ` step="0.01"` : "";
+  return `<input type="${tipo}"${passo} ${base}${trava} value="${esc(v == null ? "" : v)}"`
+       + (campo.dica ? ` placeholder="${esc(campo.dica)}"` : "") + `>`;
+}
+
+function pinta(){
+  const d = TAB[M.atual], alvo = el("mg-tabela");
+  const todos = M.dados[M.atual] || [];
+  const b = chave(M.busca);
+  const lista = b ? todos.filter(r => chave(Object.values(r).join(" ")).includes(b)) : todos;
+
+  let extra = "";
+  if(M.atual === "distancias"){
+    const faltam = todos.filter(r => r.km == null).length;
+    extra = ` · <b class="${faltam ? "mg-ruim" : "mg-bom"}">${inte(faltam)} sem km</b>`;
+  }
+  if(M.atual === "transporte"){
+    const faltam = todos.filter(r => r.rs_km == null).length;
+    extra = faltam ? ` · <b class="mg-ruim">${inte(faltam)} sem custo definido</b>` : "";
+  }
+  el("mg-resumo").innerHTML = `${inte(todos.length)} ${d.rotulo.toLowerCase()}`
+    + (b ? ` · mostrando ${inte(lista.length)}` : "") + extra;
+
+  el("mg-acoes").innerHTML = M.atual === "distancias"
+    ? `<button class="btn" id="mg-rotas" type="button">Calcular as que faltam</button>
+       <span class="mg-nota">usa a função de rotas do Netlify, 6 cidades por vez</span>` : "";
+  if(el("mg-rotas")) el("mg-rotas").onclick = calculaRotas;
+
+  const CAP = 400;
+  alvo.innerHTML = `
+    <datalist id="mg-eqs">${M.eqs.map(n => `<option value="${esc(n)}">`).join("")}</datalist>
+    <table class="mg-tb">
+      <thead><tr>${d.campos.map(c => `<th style="width:${c.larg}">${esc(c.t)}</th>`).join("")}
+        <th class="mg-cx"></th></tr></thead>
+      <tbody>
+        ${lista.slice(0, CAP).map(r => `<tr>
+          ${d.campos.map(c => `<td>${celula(d, r, c, false)}</td>`).join("")}
+          <td class="mg-cx"><button class="mg-del" type="button"
+              data-mgx="${esc(r[d.chave])}" title="Remover">✕</button></td></tr>`).join("")}
+        <tr class="mg-novo">
+          ${d.campos.map(c => `<td>${celula(d, null, c, true)}</td>`).join("")}
+          <td class="mg-cx"><button class="mg-add" type="button" id="mg-add">incluir</button></td>
+        </tr>
+      </tbody>
+    </table>
+    ${lista.length > CAP ? `<p class="mg-vazio">Mostrando ${CAP} de ${inte(lista.length)}.
+      Use a busca para o resto.</p>` : ""}`;
+
+  alvo.querySelectorAll("[data-mgc]:not([data-mgn])").forEach(i => { i.onchange = () => salva(i); });
+  alvo.querySelectorAll("[data-mgx]").forEach(x => { x.onclick = () => remove(x.dataset.mgx); });
+  el("mg-add").onclick = inclui;
+}
+
+const valorDe = i => i.type === "checkbox" ? i.checked
+                : (i.type === "number" ? (i.value === "" ? null : Number(i.value)) : txt(i.value));
+
+async function salva(input){
+  const d = TAB[M.atual];
+  const id = input.dataset.mgi, campo = input.dataset.mgc;
+  const linha = (M.dados[M.atual] || []).find(r => String(r[d.chave]) === id);
+  if(!linha) return;
+  let v = valorDe(input);
+  if(typeof v === "string" && !v && campo !== "maquina" && campo !== "regiao"
+     && campo !== "classificacao" && campo !== "observacao" && campo !== "descricao") v = null;
+  const def = d.campos.find(c => c.c === campo);
+  if(def && def.obrig && (v === null || v === "")){
+    aviso("Este campo não pode ficar vazio.", "ruim");
+    input.value = linha[campo] == null ? "" : linha[campo];
+    return;
+  }
+  input.classList.add("mg-salvando");
+  const {error} = await SB.from(d.tabela).update({[campo]: v}).eq(d.chave, id);
+  input.classList.remove("mg-salvando");
+  if(error){
+    aviso("Não gravei: " + porque(error), "ruim");
+    input.value = linha[campo] == null ? "" : linha[campo];
+    return;
+  }
+  linha[campo] = v;
+  aviso("Gravado.", "ok");
+}
+
+async function inclui(){
+  const d = TAB[M.atual], novo = {};
+  document.querySelectorAll("[data-mgn]").forEach(i => {
+    let v = valorDe(i);
+    if(typeof v === "string" && !v) v = null;
+    if(v !== null) novo[i.dataset.mgc] = v;
+  });
+  const falta = d.campos.filter(c => c.obrig && (novo[c.c] === undefined || novo[c.c] === null))
+                        .map(c => c.t);
+  if(falta.length){ aviso("Falta preencher: " + falta.join(", ") + ".", "ruim"); return; }
+  const bt = el("mg-add"); bt.disabled = true;
+  const {data, error} = await SB.from(d.tabela).insert(novo).select();
+  bt.disabled = false;
+  if(error){ aviso("Não incluí: " + porque(error), "ruim"); return; }
+  M.dados[M.atual].push((data && data[0]) || novo);
+  if(M.atual === "equipamentos") M.eqs.push(novo.nome);
+  aviso("Incluído.", "ok");
+  pinta();
+}
+
+async function remove(id){
+  const d = TAB[M.atual];
+  if(!confirm(`Remover esta linha de ${d.rotulo.toLowerCase()}?\n\nSe houver algo apontando `
+    + `para ela, o banco recusa — nesse caso desmarque «ativo» em vez de remover.`)) return;
+  const {error} = await SB.from(d.tabela).delete().eq(d.chave, id);
+  if(error){ aviso("Não removi: " + porque(error), "ruim"); return; }
+  M.dados[M.atual] = M.dados[M.atual].filter(r => String(r[d.chave]) !== String(id));
+  aviso("Removido.", "ok");
+  pinta();
+}
+
+/* ---------- o laço das distâncias ----------
+   A função do Netlify resolve algumas por chamada, porque o Nominatim
+   pede uma consulta por segundo e o Netlify derruba função demorada.
+   Aqui o laço roda sozinho até acabar. */
+async function calculaRotas(){
+  const bt = el("mg-rotas");
+  bt.disabled = true;
+  let total = 0, erros = 0, voltas = 0;
+  try{
+    while(voltas++ < 60){
+      bt.textContent = `Calculando… ${total} prontas`;
+      const r = await fetch("/.netlify/functions/rota?pendentes=1&limite=6");
+      const d = await r.json();
+      if(d.erro) throw new Error(d.erro);
+      total += d.resolvidas || 0;
+      erros += d.comErro || 0;
+      if(!d.restam && !d.resolvidas) break;
+      if(!d.restam) break;
+    }
+    delete M.dados.distancias;
+    await carrega("distancias");
+    aviso(`${total} cidade(s) calculada(s)` + (erros ? `, ${erros} com erro` : "") + ".",
+          erros ? "ruim" : "ok");
+    pinta();
+  }catch(e){
+    aviso("Parei: " + porque(e) + ". O que já foi calculado está gravado.", "ruim");
+  }
+  bt.disabled = false; bt.textContent = "Calcular as que faltam";
+}
+
+function aviso(t, k){
+  const m = el("mg-msg");
+  if(!m) return;
+  m.className = "mg-msg" + (k ? " " + k : "");
+  m.textContent = t;
+  clearTimeout(aviso._t);
+  aviso._t = setTimeout(() => { if(m.textContent === t) m.textContent = ""; }, 4000);
+}
+
+const ESTILO = `
+<style>
+#mg-bloco .mg-topo{display:flex; gap:9px; align-items:center; flex-wrap:wrap; margin-bottom:11px}
+#mg-bloco .mg-abas{display:flex; gap:3px; flex-wrap:wrap; flex:1}
+#mg-bloco .mg-aba{appearance:none; cursor:pointer; font:inherit; font-size:11.5px;
+  font-weight:600; padding:5px 11px; border-radius:20px; border:1px solid var(--bd);
+  background:var(--card); color:var(--ink-3)}
+#mg-bloco .mg-aba:hover{color:inherit}
+#mg-bloco .mg-aba.ativa{background:var(--marca); border-color:var(--marca); color:#fff}
+#mg-bloco .mg-busca{min-width:160px; padding:6px 10px; font:inherit; font-size:12.5px;
+  border:1px solid var(--bd); border-radius:8px; background:var(--card); color:inherit}
+#mg-bloco .mg-resumo{font-size:12.5px; color:var(--ink-3); margin:0 0 9px}
+#mg-bloco .mg-bom{color:#1f6b40} #mg-bloco .mg-ruim{color:#a4323b}
+#mg-bloco .mg-acoes{display:flex; gap:9px; align-items:center; margin-bottom:10px}
+#mg-bloco .mg-acoes:empty{display:none}
+#mg-bloco .mg-acoes .btn{font-size:12px; padding:6px 12px}
+#mg-bloco .mg-nota{font-size:11px; color:var(--ink-3)}
+#mg-bloco .mg-vazio{font-size:12.5px; color:var(--ink-3); padding:14px 2px; margin:0}
+#mg-bloco .mg-tabela{overflow-x:auto}
+#mg-bloco .mg-tb{width:100%; border-collapse:collapse; font-size:12px; min-width:760px}
+#mg-bloco .mg-tb th{text-align:left; font-size:10.5px; text-transform:uppercase;
+  letter-spacing:.5px; color:var(--ink-3); font-weight:700; padding:0 6px 6px;
+  border-bottom:1px solid var(--bd); white-space:nowrap}
+#mg-bloco .mg-tb td{padding:3px 6px; border-bottom:1px solid var(--bd)}
+#mg-bloco .mg-tb input, #mg-bloco .mg-tb select{width:100%; font:inherit; font-size:11.5px;
+  padding:4px 6px; border:1px solid transparent; border-radius:5px;
+  background:transparent; color:inherit}
+#mg-bloco .mg-tb input:hover, #mg-bloco .mg-tb select:hover{border-color:var(--bd)}
+#mg-bloco .mg-tb input:focus, #mg-bloco .mg-tb select:focus{border-color:var(--marca);
+  background:var(--card); outline:none}
+#mg-bloco .mg-tb input[readonly]{color:var(--ink-3); cursor:default}
+#mg-bloco .mg-tb input[readonly]:hover{border-color:transparent}
+#mg-bloco .mg-tb input[type=checkbox]{width:auto; margin:0 0 0 4px}
+#mg-bloco .mg-tb input.mg-salvando{opacity:.5}
+#mg-bloco tr.mg-novo{background:var(--card)}
+#mg-bloco tr.mg-novo td{border-top:2px solid var(--bd)}
+#mg-bloco .mg-cx{width:62px}
+#mg-bloco .mg-add{appearance:none; cursor:pointer; font:inherit; font-size:10.5px;
+  font-weight:700; padding:4px 9px; border-radius:20px; width:100%;
+  border:1px solid var(--marca); background:var(--marca); color:#fff}
+#mg-bloco .mg-add:disabled{opacity:.5}
+#mg-bloco .mg-del{appearance:none; cursor:pointer; border:1px solid var(--bd);
+  background:var(--card); color:var(--ink-3); border-radius:5px; font-size:11px;
+  line-height:1; padding:3px 6px}
+#mg-bloco .mg-del:hover{border-color:#a4323b; color:#a4323b}
+#mg-bloco .mg-msg{font-size:12px; margin:9px 0 0; min-height:17px}
+#mg-bloco .mg-msg.ok{color:#1f6b40} #mg-bloco .mg-msg.ruim{color:#a4323b}
+</style>`;
+
+if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", monta);
+else monta();
+})();
+</script>
 <script type="text/plain" id="js-fin">
 /* ============================================================
    FINANCEIRO — medições, faturamento e recebimentos.
@@ -7162,6 +7532,7 @@ function ligarPainel(papel){
   rodar("js-med");        // medições e recebimentos
   rodar("js-fin");        // telas do financeiro
   rodar("js-fotos");      // fotos da equipe (só admin)
+  rodar("js-margem");     // custos padrão da margem de obra (só admin)
   /* com a base vazia, quem avisa agora é a tela de aplicações */
 }
 
