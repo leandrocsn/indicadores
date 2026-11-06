@@ -5969,15 +5969,20 @@ async function carrega(){
   const {data, error} = await SB.rpc("margem_obras", {p_de: de, p_ate: ate});
   if(error) throw error;
   MT.obras = (data || []).sort((a, b) => String(b.fim).localeCompare(String(a.fim)));
+  /* o servidor corta em 1.000 linhas. Se vier exatamente isso, muito
+     provavelmente faltou obra — melhor dizer do que somar errado. */
+  MT.truncado = MT.obras.length >= 1000;
   MT.carregado = true;
 }
 
-/* os anos e meses não saem das obras do recorte — senão escolher um ano
-   sumiria com os outros da lista. Vêm de uma consulta leve, uma vez. */
+/* Os meses vêm de uma função do banco, não de uma leitura da visão.
+   Lendo a visão, o Supabase devolveria só as 1.000 primeiras linhas —
+   as mais antigas — e o ano corrente sumiria do seletor sem aviso. */
 async function carregaPeriodos(){
   if(MT.periodos) return;
-  const {data} = await SB.from("margem_dia").select("data").order("data").limit(50000);
-  MT.periodos = [...new Set((data || []).map(r => String(r.data).slice(0, 7)))];
+  const {data, error} = await SB.rpc("margem_periodos");
+  if(error) throw error;
+  MT.periodos = (data || []).map(r => r.mes).filter(Boolean).sort().reverse();
 }
 
 const MESES = ["janeiro","fevereiro","março","abril","maio","junho",
@@ -6168,11 +6173,14 @@ function pinta(){
     + cart("Incompletas", `<span class="${incompletas ? "mt-ruim" : "mt-bom"}">${inte(incompletas)}</span>`,
            incompletas ? "falta distância ou custo por km" : "todas com os dados completos");
 
-  el("mt-alerta").innerHTML = incompletas
+  el("mt-alerta").innerHTML = (MT.truncado
+    ? `<p class="mt-alerta"><b>Atenção:</b> o servidor devolveu o máximo de 1.000 obras e
+       pode ter cortado o resto. Filtre por ano para ver tudo, e me avise — o jeito certo
+       é paginar a leitura.</p>` : "") + (incompletas
     ? `<p class="mt-alerta"><b>${inte(incompletas)} obra(s) com número incompleto.</b>
        Falta a distância da cidade ou o custo por km de algum equipamento — o custo
        sai menor do que é. Elas aparecem marcadas na lista, e dá para isolá-las no
-       filtro. Os preços se acertam na Atualização de dados.</p>` : "";
+       filtro. Os preços se acertam na Atualização de dados.</p>` : "");
 
   if(!l.length){
     alvo.innerHTML = `<p class="mt-vazio">Nenhuma obra neste recorte.</p>`;
@@ -6305,7 +6313,7 @@ async function abre(obra){
     let q = SB.from("margem_obra_dia")
       .select("data,maquina,pessoas,producao_un,receita_total,diesel,manutencao,"
             + "alimentacao,estadia,mao_de_obra,gratificacao")
-      .eq("obra", obra).order("data").limit(500);
+      .eq("obra", obra).order("data").limit(1000);
     if(de)  q = q.gte("data", de);
     if(ate) q = q.lte("data", ate);
     const {data, error} = await q;
