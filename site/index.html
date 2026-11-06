@@ -6002,6 +6002,11 @@ function visiveis(){
 function tela(){
   const pg = el("pg-margem-teorica");
   if(!pg || el("mt-wrap")) return;
+  const campo = (id, rot, larga) => `
+    <div class="mt-campo${larga ? " larga" : ""}">
+      <label class="eyebrow">${rot}</label>
+      <select class="mt-ctrl mt-f" id="${id}"></select>
+    </div>`;
   pg.innerHTML = ESTILO + `
     <div class="wrap" id="mt-wrap">
       <div class="cab">
@@ -6011,32 +6016,45 @@ function tela(){
              custos, na Atualização de dados — mudou lá, muda aqui.</p>
         </div>
       </div>
-      <div class="mt-topo">
-        <select class="mt-f" id="mt-ano"></select>
-        <select class="mt-f" id="mt-mes"></select>
-        <select class="mt-f" id="mt-cliente"></select>
-        <select class="mt-f" id="mt-equip"></select>
-        <select class="mt-f" id="mt-ensaio"></select>
+
+      <div class="filtros mt-filtros">
+        ${campo("mt-ano", "Ano")}
+        ${campo("mt-mes", "Mês")}
+        ${campo("mt-cliente", "Cliente", true)}
+        ${campo("mt-equip", "Equipamento")}
+        ${campo("mt-ensaio", "Ensaio")}
+        <div class="mt-campo">
+          <label class="eyebrow">Mostrar</label>
+          <select class="mt-ctrl mt-f" id="mt-so">
+            <option value="todas">Todas as obras</option>
+            <option value="negativas">Só as com prejuízo</option>
+            <option value="incompletas">Só as incompletas</option>
+          </select>
+        </div>
+        <div class="mt-campo">
+          <label class="eyebrow">Ordem</label>
+          <select class="mt-ctrl mt-f" id="mt-ordem">
+            <option value="margem">Pior margem</option>
+            <option value="pct">Pior margem %</option>
+            <option value="receita">Maior receita</option>
+            <option value="data">Mais recente</option>
+          </select>
+        </div>
+        <div class="mt-campo larga">
+          <label class="eyebrow">Procurar</label>
+          <input class="mt-ctrl mt-f" id="mt-busca" type="search"
+                 placeholder="obra, cliente ou cidade">
+        </div>
+        <button class="btn limpar" id="mt-limpa" type="button">Limpar</button>
       </div>
-      <div class="mt-topo">
-        <select class="mt-f" id="mt-so">
-          <option value="todas">Todas as obras</option>
-          <option value="negativas">Só as que deram prejuízo</option>
-          <option value="incompletas">Só as incompletas</option>
-        </select>
-        <select class="mt-f" id="mt-ordem">
-          <option value="margem">Pior margem primeiro</option>
-          <option value="pct">Pior margem % primeiro</option>
-          <option value="receita">Maior receita primeiro</option>
-          <option value="data">Mais recente primeiro</option>
-        </select>
-        <input class="mt-f mt-busca" id="mt-busca" type="search"
-               placeholder="Procurar obra, cliente ou cidade…">
-        <button class="mt-limpa" id="mt-limpa" type="button">Limpar filtros</button>
-      </div>
-      <div class="mt-kpis" id="mt-kpis"></div>
+
+      <div class="grade g3" id="mt-kpis"></div>
       <div id="mt-alerta"></div>
-      <div class="mt-tabela" id="mt-tabela"></div>
+      <div class="painel">
+        <h2>Obras no recorte</h2>
+        <p>Clique no <b>+</b> para ver de onde vem o custo e o dia a dia da obra.</p>
+        <div class="rolagem-x" id="mt-tabela"></div>
+      </div>
     </div>`;
   pg.querySelectorAll(".mt-f").forEach(c => {
     c.oninput = () => {
@@ -6082,16 +6100,24 @@ function pinta(){
   const incompletas = l.filter(o => o.sem_km || o.sem_preco_transporte).length;
   const negativas = l.filter(o => o.margem < 0).length;
 
-  el("mt-kpis").innerHTML = `
-    <div class="mt-kpi"><span>Obras</span><b>${inte(l.length)}</b></div>
-    <div class="mt-kpi"><span>Receita</span><b>R$ ${brl0(rec)}</b></div>
-    <div class="mt-kpi"><span>Custo teórico</span><b>R$ ${brl0(cus)}</b></div>
-    <div class="mt-kpi"><span>Margem</span>
-      <b class="${mar < 0 ? "mt-ruim" : "mt-bom"}">R$ ${brl0(mar)}</b></div>
-    <div class="mt-kpi"><span>Margem %</span>
-      <b class="${mar < 0 ? "mt-ruim" : "mt-bom"}">${rec ? (100 * mar / rec).toFixed(1) : "—"}%</b></div>
-    <div class="mt-kpi"><span>Com prejuízo</span>
-      <b class="${negativas ? "mt-ruim" : "mt-bom"}">${inte(negativas)}</b></div>`;
+  /* usa o mesmo cartão das outras telas, para a página não destoar */
+  const cart = typeof kpi === "function" ? kpi
+    : (r, v, s) => `<div class="painel"><div class="eyebrow">${r}</div>`
+                 + `<div style="font-size:25px;font-weight:700;margin:5px 0 3px">${v}</div>`
+                 + `<div style="font-size:11.5px;color:var(--ink-3)">${s || ""}</div></div>`;
+  const moeda = v => `<span class="pre">R$</span>${brl0(v)}`;
+  el("mt-kpis").innerHTML =
+      cart("Receita", moeda(rec), `${inte(l.length)} obra(s) no recorte`)
+    + cart("Custo teórico", moeda(cus),
+           rec ? `${(100 * cus / rec).toFixed(1)}% da receita` : "sem receita no recorte")
+    + cart("Margem", `<span class="${mar < 0 ? "mt-ruim" : "mt-bom"}">${moeda(mar)}</span>`,
+           rec ? `${(100 * mar / rec).toFixed(1)}% da receita` : "")
+    + cart("Com prejuízo", `<span class="${negativas ? "mt-ruim" : "mt-bom"}">${inte(negativas)}</span>`,
+           negativas ? "obras em que o custo passou a receita" : "nenhuma obra no vermelho")
+    + cart("Dias de equipamento", inte(l.reduce((a, o) => a + (o.dias_equipamento || 0), 0)),
+           `${inte(l.reduce((a, o) => a + (o.dias_corridos || 0), 0))} dias com produção`)
+    + cart("Incompletas", `<span class="${incompletas ? "mt-ruim" : "mt-bom"}">${inte(incompletas)}</span>`,
+           incompletas ? "falta distância ou custo por km" : "todas com os dados completos");
 
   el("mt-alerta").innerHTML = incompletas
     ? `<p class="mt-alerta"><b>${inte(incompletas)} obra(s) com número incompleto.</b>
@@ -6104,7 +6130,7 @@ function pinta(){
     return;
   }
   alvo.innerHTML = `
-    <table class="mt-tb">
+    <table class="tab mt-tb">
       <thead><tr>
         <th class="mt-ob">Obra</th><th>Cliente</th><th>Cidade</th><th>Equipamento</th>
         <th class="mt-n">Dias</th><th class="mt-n">KM</th>
@@ -6191,7 +6217,7 @@ function detalhe(o){
 function tabelaDias(linhas){
   if(!linhas.length) return `<p class="mt-vazio">Sem lançamentos de produção.</p>`;
   return `<h4>Dia a dia</h4>
-    <table class="mt-tb mt-tbd">
+    <table class="tab mt-tbd">
       <thead><tr><th class="mt-n">Dia</th><th>Equipamento</th><th class="mt-n">Pessoas</th>
         <th class="mt-n">Produção</th><th class="mt-v">Receita</th>
         ${CUSTOS.slice(0, 6).map(([, n]) => `<th class="mt-v">${n}</th>`).join("")}
@@ -6236,70 +6262,75 @@ window.MARGEM_TEORICA = abrir;
 
 const ESTILO = `
 <style>
-#pg-margem-teorica .mt-topo{display:flex; gap:8px; flex-wrap:wrap; margin:0 0 14px}
-#pg-margem-teorica .mt-f{padding:7px 10px; font:inherit; font-size:12.5px;
-  border:1px solid var(--bd); border-radius:8px; background:var(--card); color:inherit}
-#pg-margem-teorica .mt-busca{flex:1; min-width:200px}
-#pg-margem-teorica .mt-topo + .mt-topo{margin-top:-6px}
-#pg-margem-teorica .mt-limpa{appearance:none; cursor:pointer; font:inherit; font-size:12px;
-  padding:7px 13px; border-radius:8px; border:1px solid var(--bd);
-  background:var(--card); color:var(--ink-3)}
-#pg-margem-teorica .mt-limpa:hover{color:inherit; border-color:var(--line-strong)}
-#pg-margem-teorica .mt-eq{max-width:150px; font-size:11px; color:var(--ink-3)}
-#pg-margem-teorica .mt-kpis{display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px}
-#pg-margem-teorica .mt-kpi{flex:1; min-width:124px; background:var(--card);
-  border:1px solid var(--bd); border-radius:10px; padding:10px 13px}
-#pg-margem-teorica .mt-kpi span{display:block; font-size:10.5px; text-transform:uppercase;
-  letter-spacing:.5px; color:var(--ink-3); font-weight:700; margin-bottom:3px}
-#pg-margem-teorica .mt-kpi b{font-size:17px; font-variant-numeric:tabular-nums}
-#pg-margem-teorica .mt-bom{color:#1f6b40} #pg-margem-teorica .mt-ruim{color:#a4323b}
-#pg-margem-teorica .mt-alerta{font-size:12.5px; background:#fdf5e3; border-left:3px solid #d9a441;
-  padding:10px 13px; border-radius:0 7px 7px 0; margin:0 0 14px; line-height:1.6}
+/* a tela usa as classes do próprio painel (.painel, .tab, .fdrop, .fbtn,
+   .grade). O que vem abaixo é só o que não existe lá. */
+#pg-margem-teorica .mt-filtros{margin-bottom:14px}
+/* mesma aparência do filtro da produção, com classes próprias: as do
+   painel são varridas pelo código da barra dele, que espera um .fpop
+   dentro de cada .fdrop e quebra nos meus */
+#pg-margem-teorica .mt-campo{display:flex; flex-direction:column; gap:4px;
+  flex:1 1 150px; min-width:0; max-width:230px}
+#pg-margem-teorica .mt-campo.larga{flex:1 1 210px; max-width:300px}
+#pg-margem-teorica .mt-ctrl{width:100%; font-family:"IBM Plex Sans",sans-serif;
+  font-size:12.5px; color:var(--ink); text-align:left; background:var(--surface);
+  border:1px solid var(--line-strong); border-radius:8px; padding:7px 9px}
+#pg-margem-teorica .mt-ctrl:hover{border-color:var(--ink-3)}
+#pg-margem-teorica .mt-ctrl:focus-visible{outline:2px solid var(--s1); outline-offset:2px}
+#pg-margem-teorica select.mt-f, #pg-margem-teorica input.mt-f{
+  appearance:none; width:100%; cursor:pointer;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2.4' stroke-linecap='round'><path d='M6 9l6 6 6-6'/></svg>");
+  background-repeat:no-repeat; background-position:right 9px center; padding-right:26px}
+#pg-margem-teorica input.mt-f{background-image:none; cursor:text; padding-right:9px}
+#pg-margem-teorica .btn.limpar{align-self:flex-end}
+#pg-margem-teorica .mt-bom{color:var(--ok, #1f6b40)}
+#pg-margem-teorica .mt-ruim{color:var(--warn, #a4323b)}
+#pg-margem-teorica .mt-alerta{font-size:12.5px; background:var(--surface-2);
+  border:1px solid var(--line); border-left:3px solid #d9a441;
+  padding:11px 14px; border-radius:var(--r); margin:0 0 14px; line-height:1.6}
 #pg-margem-teorica .mt-vazio{font-size:12.5px; color:var(--ink-3); padding:16px 2px; margin:0}
-#pg-margem-teorica .mt-tabela{overflow-x:auto}
-#pg-margem-teorica .mt-tb{width:100%; border-collapse:collapse; font-size:12px; min-width:900px}
-#pg-margem-teorica .mt-tb th{text-align:left; font-size:10.5px; text-transform:uppercase;
-  letter-spacing:.5px; color:var(--ink-3); font-weight:700; padding:0 7px 7px;
-  border-bottom:1px solid var(--bd); white-space:nowrap}
-#pg-margem-teorica .mt-tb td{padding:6px 7px; border-bottom:1px solid var(--bd)}
-#pg-margem-teorica tr.mt-neg{background:#fdf7f7}
-#pg-margem-teorica .mt-n{text-align:right; width:58px; white-space:nowrap;
-  font-variant-numeric:tabular-nums}
-#pg-margem-teorica .mt-v{text-align:right; width:92px; white-space:nowrap;
-  font-variant-numeric:tabular-nums}
-#pg-margem-teorica .mt-p{text-align:right; width:58px; white-space:nowrap;
-  font-variant-numeric:tabular-nums}
-#pg-margem-teorica .mt-ob{width:120px; white-space:nowrap}
-#pg-margem-teorica .mt-x{width:34px}
-#pg-margem-teorica .mt-txt{max-width:190px; overflow:hidden; text-overflow:ellipsis;
-  white-space:nowrap}
-#pg-margem-teorica .mt-flag{display:inline-block; margin-left:6px; font-size:9.5px;
-  font-weight:700; text-transform:uppercase; letter-spacing:.4px; padding:1px 6px;
-  border-radius:20px; background:#fdf5e3; color:#8a6412}
-#pg-margem-teorica .mt-exp{appearance:none; cursor:pointer; width:24px; height:24px;
-  border:1px solid var(--bd); background:var(--card); color:var(--ink-3);
-  border-radius:6px; font-size:14px; line-height:1}
-#pg-margem-teorica .mt-exp:hover{border-color:var(--marca); color:var(--marca)}
-#pg-margem-teorica tr.mt-det > td{background:var(--card); padding:14px 16px}
-#pg-margem-teorica .mt-dgrade{display:grid; grid-template-columns:1.3fr 1fr; gap:26px}
+
+/* a tabela é a .tab do painel; aqui só as larguras e a linha de detalhe */
+#pg-margem-teorica .mt-tb{min-width:980px}
+#pg-margem-teorica .mt-tb td{vertical-align:middle}
+#pg-margem-teorica .mt-tb tr.mt-neg td{background:var(--surface-2)}
+#pg-margem-teorica .mt-n{width:56px} 
+#pg-margem-teorica .mt-v{width:94px}
+#pg-margem-teorica .mt-p{width:56px}
+#pg-margem-teorica .mt-ob{width:118px}
+#pg-margem-teorica .mt-x{width:38px; text-align:center !important}
+#pg-margem-teorica .mt-txt{max-width:170px; overflow:hidden; text-overflow:ellipsis;
+  white-space:nowrap; text-align:left !important}
+#pg-margem-teorica .mt-eq{max-width:150px; font-size:11px; color:var(--ink-3)}
+#pg-margem-teorica .mt-flag{display:inline-block; margin-left:7px; font-size:9.5px;
+  font-weight:700; text-transform:uppercase; letter-spacing:.4px; padding:1px 7px;
+  border-radius:20px; background:var(--surface-2); border:1px solid var(--line);
+  color:#8a6412; vertical-align:middle}
+#pg-margem-teorica .mt-exp{appearance:none; cursor:pointer; width:25px; height:25px;
+  border:1px solid var(--line-strong); background:var(--surface); color:var(--ink-3);
+  border-radius:7px; font-size:14px; line-height:1}
+#pg-margem-teorica .mt-exp:hover{border-color:var(--s1); color:var(--s1)}
+
+#pg-margem-teorica tr.mt-det > td{background:var(--surface-2); padding:16px 18px;
+  text-align:left !important; white-space:normal}
+#pg-margem-teorica .mt-dgrade{display:grid; grid-template-columns:1.35fr 1fr; gap:28px}
 @media (max-width:900px){#pg-margem-teorica .mt-dgrade{grid-template-columns:1fr}}
-#pg-margem-teorica .mt-det h4{font-size:11px; text-transform:uppercase; letter-spacing:.5px;
-  color:var(--ink-3); margin:0 0 9px}
-#pg-margem-teorica .mt-l{display:flex; align-items:center; gap:9px; font-size:11.5px; padding:2px 0}
-#pg-margem-teorica .mt-ln{flex:0 0 36%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
-#pg-margem-teorica .mt-lb{flex:1; height:7px; background:var(--bd); border-radius:9px; overflow:hidden}
-#pg-margem-teorica .mt-lb i{display:block; height:100%; background:var(--marca); border-radius:9px}
-#pg-margem-teorica .mt-lv{flex:0 0 82px; text-align:right; font-variant-numeric:tabular-nums}
-#pg-margem-teorica .mt-lp{flex:0 0 34px; text-align:right; color:var(--ink-3)}
-#pg-margem-teorica .mt-tot{border-top:1px solid var(--bd); margin-top:5px; padding-top:6px}
-#pg-margem-teorica .mt-pares{display:grid; grid-template-columns:auto 1fr; gap:4px 14px;
-  font-size:11.5px; align-items:baseline}
-#pg-margem-teorica .mt-pares span{color:var(--ink-3)}
-#pg-margem-teorica .mt-pares b{font-variant-numeric:tabular-nums}
-#pg-margem-teorica .mt-aviso-mini{font-size:11px; color:#8a6412; margin:11px 0 0; line-height:1.5}
-#pg-margem-teorica .mt-dias{margin-top:16px}
-#pg-margem-teorica .mt-tbd{font-size:11px; min-width:720px}
-#pg-margem-teorica .mt-tbd td{padding:3px 7px}
+#pg-margem-teorica .mt-det h4{font-family:Archivo,sans-serif; font-size:12.5px;
+  font-weight:700; margin:0 0 10px}
+#pg-margem-teorica .mt-l{display:flex; align-items:center; gap:10px; font-size:12px; padding:3px 0}
+#pg-margem-teorica .mt-ln{flex:0 0 38%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+#pg-margem-teorica .mt-lb{flex:1; height:8px; background:var(--line); border-radius:9px; overflow:hidden}
+#pg-margem-teorica .mt-lb i{display:block; height:100%; background:var(--s1); border-radius:9px}
+#pg-margem-teorica .mt-lv{flex:0 0 88px; text-align:right;
+  font-family:"IBM Plex Mono",monospace; font-variant-numeric:tabular-nums; font-size:11.5px}
+#pg-margem-teorica .mt-lp{flex:0 0 36px; text-align:right; color:var(--ink-3); font-size:11.5px}
+#pg-margem-teorica .mt-tot{border-top:1px solid var(--line); margin-top:7px; padding-top:8px}
+#pg-margem-teorica .mt-pares{display:grid; grid-template-columns:auto 1fr; gap:5px 16px;
+  font-size:12px; align-items:baseline}
+#pg-margem-teorica .mt-pares > span{color:var(--ink-3)}
+#pg-margem-teorica .mt-pares > b{font-variant-numeric:tabular-nums}
+#pg-margem-teorica .mt-aviso-mini{font-size:11.5px; color:#8a6412; margin:12px 0 0; line-height:1.55}
+#pg-margem-teorica .mt-dias{margin-top:18px}
+#pg-margem-teorica .mt-tbd{font-size:11.5px; min-width:760px}
 </style>`;
 })();
 </script>
