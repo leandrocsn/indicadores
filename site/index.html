@@ -1155,7 +1155,7 @@ body.escolhendo{overflow:hidden}
       <button class="nav" type="button" data-pg="fin-comp"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 20h4V10H3v10Zm7 0h4V4h-4v16Zm7 0h4v-7h-4v7Z"/></svg><span>Comparativos</span></button>
       <button class="nav" type="button" data-pg="fin-meta"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8M21 7h-5m5 0v5"/></svg><span>Meta acumulada</span></button>
       <div class="navgrupo">Margem de obra</div>
-      <button class="nav" type="button" data-pg="margem-teorica"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18M7 16l3.5-4 3 2.5L20 8"/></svg><span>Margem teórica</span><span class="cad aviso" title="Em construção">&#9888;&#65039;</span></button>
+      <button class="nav" type="button" data-pg="margem-teorica"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18M7 16l3.5-4 3 2.5L20 8"/></svg><span>Margem teórica</span></button>
       <button class="nav" type="button" data-pg="margem-real"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-9-9v9h9Z"/></svg><span>Margem real</span><span class="cad aviso" title="Em construção">&#9888;&#65039;</span></button>
       <button class="nav" type="button" data-pg="margem-comp"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4v16M15 4v16M4 9h16M4 15h16"/></svg><span>Comparativo teórico e real</span><span class="cad aviso" title="Em construção">&#9888;&#65039;</span></button>
       <div class="navgrupo">Pessoas</div>
@@ -1912,6 +1912,9 @@ body.escolhendo{overflow:hidden}
   </section>
 
   <!-- ======================= USUÁRIOS E PERMISSÕES ======================= -->
+  <!-- ======================= MARGEM TEÓRICA ======================= -->
+  <section class="pagina" id="pg-margem-teorica"></section>
+
   <section class="pagina" id="pg-usuarios">
     <div class="wrap">
       <div class="cab">
@@ -4188,7 +4191,8 @@ function pgAnual(){
    NAVEGAÇÃO, FILTRO GLOBAL E CADEADO
    ============================================================ */
 const PAGINAS = {visao:pgVisao, diaria:pgDiaria, capacidade:pgCapacidade, receitas:pgReceitas,
-                 ensaios:pgEnsaios, orcado:pgOrcado, anual:pgAnual, gratificacao:null};
+                 ensaios:pgEnsaios, orcado:pgOrcado, anual:pgAnual, gratificacao:null,
+                 "margem-teorica": () => { if(window.MARGEM_TEORICA) window.MARGEM_TEORICA(); }};
 let paginaAtual = "panorama-geral";   /* o painel abre no Panorama geral */
 
 function atualizar(){
@@ -4228,7 +4232,7 @@ const EM_BREVE = {
   "com-fechado":    "Lamentamos, mas este tópico ainda está em processo de criação. Muito em breve será apresentado o que foi fechado com os clientes.",
   "com-orcfech":    "Lamentamos, mas este tópico ainda está em processo de criação. Muito em breve será apresentado o comparativo entre o orçado e o fechado.",
   "com-funil":      "Lamentamos, mas este tópico ainda está em processo de criação. Muito em breve serão apresentados o funil comercial, a taxa de conversão e o tempo até o fechamento.",
-  "margem-teorica": "Lamentamos, mas este tópico ainda está em processo de criação. Muito em breve serão apresentados os dados de margem teórica de cada obra.",
+  "_margem-teorica": "Lamentamos, mas este tópico ainda está em processo de criação. Muito em breve serão apresentados os dados de margem teórica de cada obra.",
   "margem-real":    "Lamentamos, mas este tópico ainda está em processo de criação. Muito em breve serão apresentados os dados de margem real de cada obra.",
   "margem-comp":    "Lamentamos, mas este tópico ainda está em processo de criação. Muito em breve será apresentado o comparativo entre a margem teórica e a real."
 };
@@ -5892,6 +5896,357 @@ if(document.readyState === "loading") document.addEventListener("DOMContentLoade
 else monta();
 })();
 </script>
+<script type="text/plain" id="js-margem-tela">
+/* ============================================================
+   MARGEM TEÓRICA — a tela.
+   Lê as visões margem_obra e margem_obra_dia do banco. Nenhuma conta
+   acontece aqui: o cálculo mora no Postgres, e esta tela só mostra.
+   Visível para administrador e gestão.
+   ============================================================ */
+(() => {
+const el = id => document.getElementById(id);
+const SB = window.SB;
+if(!SB) return;
+
+const brl  = n => (Number(n) || 0).toLocaleString("pt-BR", {minimumFractionDigits: 2, maximumFractionDigits: 2});
+const brl0 = n => (Number(n) || 0).toLocaleString("pt-BR", {maximumFractionDigits: 0});
+const inte = n => (Number(n) || 0).toLocaleString("pt-BR", {maximumFractionDigits: 0});
+const txt  = v => v === null || v === undefined ? "" : String(v).trim();
+const esc  = s => txt(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const ch   = s => txt(s).normalize("NFD").replace(/[̀-ͯ]/g, "").toUpperCase();
+const dia  = d => d ? d.slice(8, 10) + "/" + d.slice(5, 7) + "/" + d.slice(0, 4) : "";
+
+const MT = {obras: [], carregado: false, ano: "", busca: "", so: "todas",
+            ordem: "margem", aberta: null, detalhe: {}};
+
+const CUSTOS = [
+  ["diesel",                 "Diesel"],
+  ["manutencao",             "Manutenção"],
+  ["alimentacao",            "Alimentação"],
+  ["estadia",                "Estadia"],
+  ["mao_de_obra",            "Mão de obra"],
+  ["gratificacao",           "Gratificação"],
+  ["veiculo",                "Locação de veículo"],
+  ["transporte_equipamento", "Transporte do equipamento"],
+  ["transporte_equipe",      "Transporte da equipe"],
+  ["avulsos",                "Avulsos"],
+];
+
+const porque = e => {
+  const m = String((e && (e.message || e.details)) || e || "").toLowerCase();
+  if(m.includes("does not exist") || m.includes("schema cache"))
+    return "o cálculo ainda não existe no banco — rode o supabase-margem-calculo.sql";
+  if(m.includes("permission") || m.includes("row-level security"))
+    return "o banco recusou: esta tela é de administrador e gestão";
+  if(m.includes("timeout") || m.includes("57014"))
+    return "a consulta demorou demais — filtre por um ano";
+  return (e && (e.message || e.details)) || String(e);
+};
+
+async function carrega(){
+  const {data, error} = await SB.from("margem_obra")
+    .select("*").order("fim", {ascending: false}).limit(2000);
+  if(error) throw error;
+  MT.obras = data || [];
+  MT.carregado = true;
+}
+
+function anos(){
+  return [...new Set(MT.obras.map(o => (o.fim || "").slice(0, 4)).filter(Boolean))]
+    .sort().reverse();
+}
+
+function visiveis(){
+  const b = ch(MT.busca);
+  let l = MT.obras.filter(o => {
+    if(MT.ano && (o.fim || "").slice(0, 4) !== MT.ano) return false;
+    if(MT.so === "negativas" && !(o.margem < 0)) return false;
+    if(MT.so === "incompletas" && !(o.sem_km || o.sem_preco_transporte)) return false;
+    if(b && !ch(`${o.obra} ${o.cliente} ${o.cidade}`).includes(b)) return false;
+    return true;
+  });
+  const cmp = {
+    margem:  (a, c) => (a.margem || 0) - (c.margem || 0),
+    pct:     (a, c) => (a.margem_pct ?? 999) - (c.margem_pct ?? 999),
+    receita: (a, c) => (c.receita || 0) - (a.receita || 0),
+    data:    (a, c) => String(c.fim).localeCompare(String(a.fim)),
+  }[MT.ordem];
+  return l.sort(cmp);
+}
+
+function tela(){
+  const pg = el("pg-margem-teorica");
+  if(!pg || el("mt-wrap")) return;
+  pg.innerHTML = ESTILO + `
+    <div class="wrap" id="mt-wrap">
+      <div class="cab">
+        <div>
+          <h1>Margem teórica</h1>
+          <p>Receita de cada obra menos o custo padrão. Os preços vêm da tabela de
+             custos, na Atualização de dados — mudou lá, muda aqui.</p>
+        </div>
+      </div>
+      <div class="mt-topo">
+        <select class="mt-f" id="mt-ano"></select>
+        <select class="mt-f" id="mt-so">
+          <option value="todas">Todas as obras</option>
+          <option value="negativas">Só as que deram prejuízo</option>
+          <option value="incompletas">Só as incompletas</option>
+        </select>
+        <select class="mt-f" id="mt-ordem">
+          <option value="margem">Pior margem primeiro</option>
+          <option value="pct">Pior margem % primeiro</option>
+          <option value="receita">Maior receita primeiro</option>
+          <option value="data">Mais recente primeiro</option>
+        </select>
+        <input class="mt-f mt-busca" id="mt-busca" type="search"
+               placeholder="Procurar obra, cliente ou cidade…">
+      </div>
+      <div class="mt-kpis" id="mt-kpis"></div>
+      <div id="mt-alerta"></div>
+      <div class="mt-tabela" id="mt-tabela"></div>
+    </div>`;
+  pg.querySelectorAll(".mt-f").forEach(f => {
+    f.oninput = () => {
+      MT.ano = el("mt-ano").value; MT.so = el("mt-so").value;
+      MT.ordem = el("mt-ordem").value; MT.busca = el("mt-busca").value;
+      MT.aberta = null;
+      pinta();
+    };
+  });
+}
+
+function pintaFiltros(){
+  const sel = el("mt-ano");
+  if(sel && !sel.options.length){
+    const as = anos();
+    sel.innerHTML = `<option value="">Todos os anos</option>`
+      + as.map(a => `<option value="${a}">${a}</option>`).join("");
+    if(as.length){ sel.value = as[0]; MT.ano = as[0]; }
+  }
+}
+
+function pinta(){
+  const alvo = el("mt-tabela");
+  if(!alvo) return;
+  const l = visiveis();
+  const soma = c => l.reduce((a, o) => a + (Number(o[c]) || 0), 0);
+  const rec = soma("receita"), cus = soma("custo_total"), mar = rec - cus;
+  const incompletas = l.filter(o => o.sem_km || o.sem_preco_transporte).length;
+  const negativas = l.filter(o => o.margem < 0).length;
+
+  el("mt-kpis").innerHTML = `
+    <div class="mt-kpi"><span>Obras</span><b>${inte(l.length)}</b></div>
+    <div class="mt-kpi"><span>Receita</span><b>R$ ${brl0(rec)}</b></div>
+    <div class="mt-kpi"><span>Custo teórico</span><b>R$ ${brl0(cus)}</b></div>
+    <div class="mt-kpi"><span>Margem</span>
+      <b class="${mar < 0 ? "mt-ruim" : "mt-bom"}">R$ ${brl0(mar)}</b></div>
+    <div class="mt-kpi"><span>Margem %</span>
+      <b class="${mar < 0 ? "mt-ruim" : "mt-bom"}">${rec ? (100 * mar / rec).toFixed(1) : "—"}%</b></div>
+    <div class="mt-kpi"><span>Com prejuízo</span>
+      <b class="${negativas ? "mt-ruim" : "mt-bom"}">${inte(negativas)}</b></div>`;
+
+  el("mt-alerta").innerHTML = incompletas
+    ? `<p class="mt-alerta"><b>${inte(incompletas)} obra(s) com número incompleto.</b>
+       Falta a distância da cidade ou o custo por km de algum equipamento — o custo
+       sai menor do que é. Elas aparecem marcadas na lista, e dá para isolá-las no
+       filtro. Os preços se acertam na Atualização de dados.</p>` : "";
+
+  if(!l.length){
+    alvo.innerHTML = `<p class="mt-vazio">Nenhuma obra neste recorte.</p>`;
+    return;
+  }
+  alvo.innerHTML = `
+    <table class="mt-tb">
+      <thead><tr>
+        <th class="mt-ob">Obra</th><th>Cliente</th><th>Cidade</th>
+        <th class="mt-n">Dias</th><th class="mt-n">KM</th>
+        <th class="mt-v">Receita</th><th class="mt-v">Custo</th>
+        <th class="mt-v">Margem</th><th class="mt-p">%</th><th class="mt-x"></th>
+      </tr></thead>
+      <tbody>${l.slice(0, 300).map(linha).join("")}</tbody>
+    </table>
+    ${l.length > 300 ? `<p class="mt-vazio">Mostrando 300 de ${inte(l.length)}.
+      Use os filtros para o resto.</p>` : ""}`;
+
+  alvo.querySelectorAll("[data-ab]").forEach(b => {
+    b.onclick = () => abre(b.dataset.ab);
+  });
+}
+
+function linha(o){
+  const falta = o.sem_km || o.sem_preco_transporte;
+  const neg = o.margem < 0;
+  const aberta = MT.aberta === o.obra;
+  return `<tr class="${neg ? "mt-neg" : ""}">
+    <td class="mt-ob"><b>${esc(o.obra)}</b>${falta
+      ? `<span class="mt-flag" title="${o.sem_km ? "sem distância da cidade" : ""}${
+          o.sem_km && o.sem_preco_transporte ? " e " : ""}${
+          o.sem_preco_transporte ? "sem custo por km do equipamento" : ""}">incompleta</span>` : ""}</td>
+    <td class="mt-txt" title="${esc(o.cliente)}">${esc(o.cliente)}</td>
+    <td class="mt-txt" title="${esc(o.cidade)}">${esc(o.cidade)}</td>
+    <td class="mt-n">${inte(o.dias_equipamento)}</td>
+    <td class="mt-n">${o.km == null ? "—" : inte(o.km)}</td>
+    <td class="mt-v">${brl0(o.receita)}</td>
+    <td class="mt-v">${brl0(o.custo_total)}</td>
+    <td class="mt-v ${neg ? "mt-ruim" : ""}">${brl0(o.margem)}</td>
+    <td class="mt-p ${neg ? "mt-ruim" : ""}">${o.margem_pct == null ? "—" : o.margem_pct + "%"}</td>
+    <td class="mt-x"><button class="mt-exp" type="button" data-ab="${esc(o.obra)}"
+        aria-expanded="${aberta}">${aberta ? "−" : "+"}</button></td>
+  </tr>` + (aberta ? detalhe(o) : "");
+}
+
+function detalhe(o){
+  const itens = CUSTOS.map(([c, nome]) => [nome, Number(o[c]) || 0]).filter(x => x[1] !== 0);
+  const total = itens.reduce((a, x) => a + x[1], 0) || 1;
+  const d = MT.detalhe[o.obra];
+  return `<tr class="mt-det"><td colspan="10">
+    <div class="mt-dgrade">
+      <div>
+        <h4>De onde vem o custo</h4>
+        ${itens.sort((a, b) => b[1] - a[1]).map(([nome, v]) => `
+          <div class="mt-l">
+            <span class="mt-ln">${esc(nome)}</span>
+            <span class="mt-lb"><i style="width:${Math.max(1, 100 * v / total)}%"></i></span>
+            <span class="mt-lv">${brl(v)}</span>
+            <span class="mt-lp">${(100 * v / total).toFixed(0)}%</span>
+          </div>`).join("")}
+        <div class="mt-l mt-tot">
+          <span class="mt-ln"><b>Custo total</b></span><span class="mt-lb"></span>
+          <span class="mt-lv"><b>${brl(o.custo_total)}</b></span><span class="mt-lp"></span>
+        </div>
+      </div>
+      <div>
+        <h4>A obra</h4>
+        <div class="mt-pares">
+          <span>Período</span><b>${dia(o.inicio)} a ${dia(o.fim)}</b>
+          <span>Dias de equipamento</span><b>${inte(o.dias_equipamento)}</b>
+          <span>Dias corridos com produção</span><b>${inte(o.dias_corridos)}</b>
+          <span>Distância</span><b>${o.km == null ? "não calculada" : inte(o.km) + " km"}</b>
+          <span>Região de preço</span><b>${o.regiao === "SP" ? "SP" : "fora de SP"}</b>
+          <span>Receita</span><b>R$ ${brl(o.receita)}</b>
+          <span>Margem</span><b class="${o.margem < 0 ? "mt-ruim" : "mt-bom"}">R$ ${brl(o.margem)}</b>
+        </div>
+        ${o.sem_km || o.sem_preco_transporte ? `<p class="mt-aviso-mini">
+          ${o.sem_km ? "Sem a distância da cidade, o transporte entrou como zero. " : ""}
+          ${o.sem_preco_transporte ? "Algum equipamento desta obra não tem custo por km definido. " : ""}
+          O custo real é maior do que o mostrado.</p>` : ""}
+      </div>
+    </div>
+    <div class="mt-dias" id="mt-dias-${esc(o.obra)}">${d
+      ? tabelaDias(d) : `<p class="mt-vazio">Carregando o dia a dia…</p>`}</div>
+  </td></tr>`;
+}
+
+function tabelaDias(linhas){
+  if(!linhas.length) return `<p class="mt-vazio">Sem lançamentos de produção.</p>`;
+  return `<h4>Dia a dia</h4>
+    <table class="mt-tb mt-tbd">
+      <thead><tr><th class="mt-n">Dia</th><th>Equipamento</th><th class="mt-n">Pessoas</th>
+        <th class="mt-n">Produção</th><th class="mt-v">Receita</th>
+        ${CUSTOS.slice(0, 6).map(([, n]) => `<th class="mt-v">${n}</th>`).join("")}
+      </tr></thead>
+      <tbody>${linhas.map(r => `<tr>
+        <td class="mt-n">${dia(r.data).slice(0, 5)}</td>
+        <td class="mt-txt">${esc(r.maquina)}</td>
+        <td class="mt-n">${inte(r.pessoas)}</td>
+        <td class="mt-n">${brl0(r.producao_un)}</td>
+        <td class="mt-v">${brl0(r.receita_total)}</td>
+        ${CUSTOS.slice(0, 6).map(([c]) => `<td class="mt-v">${brl0(r[c])}</td>`).join("")}
+      </tr>`).join("")}</tbody>
+    </table>`;
+}
+
+async function abre(obra){
+  MT.aberta = MT.aberta === obra ? null : obra;
+  pinta();
+  if(!MT.aberta || MT.detalhe[obra]) return;
+  try{
+    const {data, error} = await SB.from("margem_obra_dia")
+      .select("data,maquina,pessoas,producao_un,receita_total,diesel,manutencao,"
+            + "alimentacao,estadia,mao_de_obra,gratificacao")
+      .eq("obra", obra).order("data").limit(500);
+    if(error) throw error;
+    MT.detalhe[obra] = data || [];
+  }catch(e){ MT.detalhe[obra] = []; }
+  if(MT.aberta === obra) pinta();
+}
+
+async function abrir(){
+  const pg = el("pg-margem-teorica");
+  if(!pg) return;
+  tela();
+  if(MT.carregado){ pinta(); return; }
+  el("mt-tabela").innerHTML = `<p class="mt-vazio">Calculando as margens…</p>`;
+  try{ await carrega(); pintaFiltros(); pinta(); }
+  catch(e){ el("mt-tabela").innerHTML =
+    `<p class="mt-vazio">Não consegui calcular: ${esc(porque(e))}.</p>`; }
+}
+window.MARGEM_TEORICA = abrir;
+
+const ESTILO = `
+<style>
+#pg-margem-teorica .mt-topo{display:flex; gap:8px; flex-wrap:wrap; margin:0 0 14px}
+#pg-margem-teorica .mt-f{padding:7px 10px; font:inherit; font-size:12.5px;
+  border:1px solid var(--bd); border-radius:8px; background:var(--card); color:inherit}
+#pg-margem-teorica .mt-busca{flex:1; min-width:200px}
+#pg-margem-teorica .mt-kpis{display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px}
+#pg-margem-teorica .mt-kpi{flex:1; min-width:124px; background:var(--card);
+  border:1px solid var(--bd); border-radius:10px; padding:10px 13px}
+#pg-margem-teorica .mt-kpi span{display:block; font-size:10.5px; text-transform:uppercase;
+  letter-spacing:.5px; color:var(--ink-3); font-weight:700; margin-bottom:3px}
+#pg-margem-teorica .mt-kpi b{font-size:17px; font-variant-numeric:tabular-nums}
+#pg-margem-teorica .mt-bom{color:#1f6b40} #pg-margem-teorica .mt-ruim{color:#a4323b}
+#pg-margem-teorica .mt-alerta{font-size:12.5px; background:#fdf5e3; border-left:3px solid #d9a441;
+  padding:10px 13px; border-radius:0 7px 7px 0; margin:0 0 14px; line-height:1.6}
+#pg-margem-teorica .mt-vazio{font-size:12.5px; color:var(--ink-3); padding:16px 2px; margin:0}
+#pg-margem-teorica .mt-tabela{overflow-x:auto}
+#pg-margem-teorica .mt-tb{width:100%; border-collapse:collapse; font-size:12px; min-width:900px}
+#pg-margem-teorica .mt-tb th{text-align:left; font-size:10.5px; text-transform:uppercase;
+  letter-spacing:.5px; color:var(--ink-3); font-weight:700; padding:0 7px 7px;
+  border-bottom:1px solid var(--bd); white-space:nowrap}
+#pg-margem-teorica .mt-tb td{padding:6px 7px; border-bottom:1px solid var(--bd)}
+#pg-margem-teorica tr.mt-neg{background:#fdf7f7}
+#pg-margem-teorica .mt-n{text-align:right; width:58px; white-space:nowrap;
+  font-variant-numeric:tabular-nums}
+#pg-margem-teorica .mt-v{text-align:right; width:92px; white-space:nowrap;
+  font-variant-numeric:tabular-nums}
+#pg-margem-teorica .mt-p{text-align:right; width:58px; white-space:nowrap;
+  font-variant-numeric:tabular-nums}
+#pg-margem-teorica .mt-ob{width:120px; white-space:nowrap}
+#pg-margem-teorica .mt-x{width:34px}
+#pg-margem-teorica .mt-txt{max-width:190px; overflow:hidden; text-overflow:ellipsis;
+  white-space:nowrap}
+#pg-margem-teorica .mt-flag{display:inline-block; margin-left:6px; font-size:9.5px;
+  font-weight:700; text-transform:uppercase; letter-spacing:.4px; padding:1px 6px;
+  border-radius:20px; background:#fdf5e3; color:#8a6412}
+#pg-margem-teorica .mt-exp{appearance:none; cursor:pointer; width:24px; height:24px;
+  border:1px solid var(--bd); background:var(--card); color:var(--ink-3);
+  border-radius:6px; font-size:14px; line-height:1}
+#pg-margem-teorica .mt-exp:hover{border-color:var(--marca); color:var(--marca)}
+#pg-margem-teorica tr.mt-det > td{background:var(--card); padding:14px 16px}
+#pg-margem-teorica .mt-dgrade{display:grid; grid-template-columns:1.3fr 1fr; gap:26px}
+@media (max-width:900px){#pg-margem-teorica .mt-dgrade{grid-template-columns:1fr}}
+#pg-margem-teorica .mt-det h4{font-size:11px; text-transform:uppercase; letter-spacing:.5px;
+  color:var(--ink-3); margin:0 0 9px}
+#pg-margem-teorica .mt-l{display:flex; align-items:center; gap:9px; font-size:11.5px; padding:2px 0}
+#pg-margem-teorica .mt-ln{flex:0 0 36%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+#pg-margem-teorica .mt-lb{flex:1; height:7px; background:var(--bd); border-radius:9px; overflow:hidden}
+#pg-margem-teorica .mt-lb i{display:block; height:100%; background:var(--marca); border-radius:9px}
+#pg-margem-teorica .mt-lv{flex:0 0 82px; text-align:right; font-variant-numeric:tabular-nums}
+#pg-margem-teorica .mt-lp{flex:0 0 34px; text-align:right; color:var(--ink-3)}
+#pg-margem-teorica .mt-tot{border-top:1px solid var(--bd); margin-top:5px; padding-top:6px}
+#pg-margem-teorica .mt-pares{display:grid; grid-template-columns:auto 1fr; gap:4px 14px;
+  font-size:11.5px; align-items:baseline}
+#pg-margem-teorica .mt-pares span{color:var(--ink-3)}
+#pg-margem-teorica .mt-pares b{font-variant-numeric:tabular-nums}
+#pg-margem-teorica .mt-aviso-mini{font-size:11px; color:#8a6412; margin:11px 0 0; line-height:1.5}
+#pg-margem-teorica .mt-dias{margin-top:16px}
+#pg-margem-teorica .mt-tbd{font-size:11px; min-width:720px}
+#pg-margem-teorica .mt-tbd td{padding:3px 7px}
+</style>`;
+})();
+</script>
 <script type="text/plain" id="js-fin">
 /* ============================================================
    FINANCEIRO — medições, faturamento e recebimentos.
@@ -7533,6 +7888,7 @@ function ligarPainel(papel){
   rodar("js-fin");        // telas do financeiro
   rodar("js-fotos");      // fotos da equipe (só admin)
   rodar("js-margem");     // custos padrão da margem de obra (só admin)
+  rodar("js-margem-tela");// a tela da margem teórica
   /* com a base vazia, quem avisa agora é a tela de aplicações */
 }
 
