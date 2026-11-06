@@ -5916,8 +5916,9 @@ const esc  = s => txt(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&
 const ch   = s => txt(s).normalize("NFD").replace(/[̀-ͯ]/g, "").toUpperCase();
 const dia  = d => d ? d.slice(8, 10) + "/" + d.slice(5, 7) + "/" + d.slice(0, 4) : "";
 
-const MT = {obras: [], carregado: false, ano: "", busca: "", so: "todas",
-            ordem: "margem", aberta: null, detalhe: {}};
+const MT = {obras: [], carregado: false, aberta: null, detalhe: {},
+            f: {ano: "", mes: "", cliente: "", equip: "", ensaio: "",
+                so: "todas", ordem: "margem", busca: ""}};
 
 const CUSTOS = [
   ["diesel",                 "Diesel"],
@@ -5951,18 +5952,42 @@ async function carrega(){
   MT.carregado = true;
 }
 
-function anos(){
-  return [...new Set(MT.obras.map(o => (o.fim || "").slice(0, 4)).filter(Boolean))]
-    .sort().reverse();
+const MESES = ["janeiro","fevereiro","março","abril","maio","junho",
+               "julho","agosto","setembro","outubro","novembro","dezembro"];
+
+/* passa nos filtros, podendo ignorar um deles — é assim que cada lista
+   mostra só o que sobra depois dos OUTROS filtros */
+function passa(o, ignora){
+  const f = MT.f;
+  if(ignora !== "ano"     && f.ano     && (o.fim || "").slice(0,4) !== f.ano) return false;
+  if(ignora !== "mes"     && f.mes     && (o.fim || "").slice(5,7) !== f.mes) return false;
+  if(ignora !== "cliente" && f.cliente && o.cliente !== f.cliente) return false;
+  if(ignora !== "equip"   && f.equip
+     && !(o.equipamentos || "").split(", ").includes(f.equip)) return false;
+  if(ignora !== "ensaio"  && f.ensaio
+     && !(o.ensaios || "").split(", ").includes(f.ensaio)) return false;
+  return true;
+}
+
+function opcoes(campo){
+  const s = new Set();
+  MT.obras.filter(o => passa(o, campo)).forEach(o => {
+    if(campo === "ano")     { const a = (o.fim || "").slice(0,4); if(a) s.add(a); }
+    if(campo === "mes")     { const m = (o.fim || "").slice(5,7); if(m) s.add(m); }
+    if(campo === "cliente") { if(o.cliente) s.add(o.cliente); }
+    if(campo === "equip")   { (o.equipamentos || "").split(", ").forEach(x => x && s.add(x)); }
+    if(campo === "ensaio")  { (o.ensaios || "").split(", ").forEach(x => x && s.add(x)); }
+  });
+  return [...s].sort((a,b) => campo === "ano" ? b.localeCompare(a) : a.localeCompare(b,"pt-BR"));
 }
 
 function visiveis(){
-  const b = ch(MT.busca);
+  const b = ch(MT.f.busca);
   let l = MT.obras.filter(o => {
-    if(MT.ano && (o.fim || "").slice(0, 4) !== MT.ano) return false;
-    if(MT.so === "negativas" && !(o.margem < 0)) return false;
-    if(MT.so === "incompletas" && !(o.sem_km || o.sem_preco_transporte)) return false;
-    if(b && !ch(`${o.obra} ${o.cliente} ${o.cidade}`).includes(b)) return false;
+    if(!passa(o)) return false;
+    if(MT.f.so === "negativas" && !(o.margem < 0)) return false;
+    if(MT.f.so === "incompletas" && !(o.sem_km || o.sem_preco_transporte)) return false;
+    if(b && !ch(`${o.obra} ${o.cliente} ${o.cidade} ${o.equipamentos}`).includes(b)) return false;
     return true;
   });
   const cmp = {
@@ -5970,7 +5995,7 @@ function visiveis(){
     pct:     (a, c) => (a.margem_pct ?? 999) - (c.margem_pct ?? 999),
     receita: (a, c) => (c.receita || 0) - (a.receita || 0),
     data:    (a, c) => String(c.fim).localeCompare(String(a.fim)),
-  }[MT.ordem];
+  }[MT.f.ordem];
   return l.sort(cmp);
 }
 
@@ -5988,6 +6013,12 @@ function tela(){
       </div>
       <div class="mt-topo">
         <select class="mt-f" id="mt-ano"></select>
+        <select class="mt-f" id="mt-mes"></select>
+        <select class="mt-f" id="mt-cliente"></select>
+        <select class="mt-f" id="mt-equip"></select>
+        <select class="mt-f" id="mt-ensaio"></select>
+      </div>
+      <div class="mt-topo">
         <select class="mt-f" id="mt-so">
           <option value="todas">Todas as obras</option>
           <option value="negativas">Só as que deram prejuízo</option>
@@ -6001,29 +6032,45 @@ function tela(){
         </select>
         <input class="mt-f mt-busca" id="mt-busca" type="search"
                placeholder="Procurar obra, cliente ou cidade…">
+        <button class="mt-limpa" id="mt-limpa" type="button">Limpar filtros</button>
       </div>
       <div class="mt-kpis" id="mt-kpis"></div>
       <div id="mt-alerta"></div>
       <div class="mt-tabela" id="mt-tabela"></div>
     </div>`;
-  pg.querySelectorAll(".mt-f").forEach(f => {
-    f.oninput = () => {
-      MT.ano = el("mt-ano").value; MT.so = el("mt-so").value;
-      MT.ordem = el("mt-ordem").value; MT.busca = el("mt-busca").value;
+  pg.querySelectorAll(".mt-f").forEach(c => {
+    c.oninput = () => {
+      ["ano","mes","cliente","equip","ensaio","so","ordem","busca"]
+        .forEach(k => { const e = el("mt-" + k); if(e) MT.f[k] = e.value; });
       MT.aberta = null;
-      pinta();
+      pintaFiltros(); pinta();
     };
   });
+  el("mt-limpa").onclick = () => {
+    MT.f = {ano:"", mes:"", cliente:"", equip:"", ensaio:"",
+            so:"todas", ordem:"margem", busca:""};
+    MT.aberta = null;
+    ["so","ordem","busca"].forEach(k => { const e = el("mt-"+k); if(e) e.value = MT.f[k]; });
+    pintaFiltros(); pinta();
+  };
 }
 
 function pintaFiltros(){
-  const sel = el("mt-ano");
-  if(sel && !sel.options.length){
-    const as = anos();
-    sel.innerHTML = `<option value="">Todos os anos</option>`
-      + as.map(a => `<option value="${a}">${a}</option>`).join("");
-    if(as.length){ sel.value = as[0]; MT.ano = as[0]; }
-  }
+  const monta = (id, campo, titulo, rotulo) => {
+    const sel = el(id);
+    if(!sel) return;
+    const vals = opcoes(campo), atual = MT.f[campo];
+    sel.innerHTML = `<option value="">${titulo}</option>`
+      + vals.map(v => `<option value="${esc(v)}">${esc(rotulo ? rotulo(v) : v)}</option>`).join("");
+    /* o valor escolhido sumiu da lista? então aquele filtro deixou de valer */
+    if(atual && !vals.includes(atual)) MT.f[campo] = "";
+    sel.value = MT.f[campo] || "";
+  };
+  monta("mt-ano",     "ano",     "Todos os anos");
+  monta("mt-mes",     "mes",     "Todos os meses", m => MESES[Number(m)-1] || m);
+  monta("mt-cliente", "cliente", "Todos os clientes");
+  monta("mt-equip",   "equip",   "Todos os equipamentos");
+  monta("mt-ensaio",  "ensaio",  "Todos os ensaios");
 }
 
 function pinta(){
@@ -6059,7 +6106,7 @@ function pinta(){
   alvo.innerHTML = `
     <table class="mt-tb">
       <thead><tr>
-        <th class="mt-ob">Obra</th><th>Cliente</th><th>Cidade</th>
+        <th class="mt-ob">Obra</th><th>Cliente</th><th>Cidade</th><th>Equipamento</th>
         <th class="mt-n">Dias</th><th class="mt-n">KM</th>
         <th class="mt-v">Receita</th><th class="mt-v">Custo</th>
         <th class="mt-v">Margem</th><th class="mt-p">%</th><th class="mt-x"></th>
@@ -6085,6 +6132,7 @@ function linha(o){
           o.sem_preco_transporte ? "sem custo por km do equipamento" : ""}">incompleta</span>` : ""}</td>
     <td class="mt-txt" title="${esc(o.cliente)}">${esc(o.cliente)}</td>
     <td class="mt-txt" title="${esc(o.cidade)}">${esc(o.cidade)}</td>
+    <td class="mt-txt mt-eq" title="${esc(o.equipamentos)}">${esc(o.equipamentos)}</td>
     <td class="mt-n">${inte(o.dias_equipamento)}</td>
     <td class="mt-n">${o.km == null ? "—" : inte(o.km)}</td>
     <td class="mt-v">${brl0(o.receita)}</td>
@@ -6100,7 +6148,7 @@ function detalhe(o){
   const itens = CUSTOS.map(([c, nome]) => [nome, Number(o[c]) || 0]).filter(x => x[1] !== 0);
   const total = itens.reduce((a, x) => a + x[1], 0) || 1;
   const d = MT.detalhe[o.obra];
-  return `<tr class="mt-det"><td colspan="10">
+  return `<tr class="mt-det"><td colspan="11">
     <div class="mt-dgrade">
       <div>
         <h4>De onde vem o custo</h4>
@@ -6124,6 +6172,8 @@ function detalhe(o){
           <span>Dias corridos com produção</span><b>${inte(o.dias_corridos)}</b>
           <span>Distância</span><b>${o.km == null ? "não calculada" : inte(o.km) + " km"}</b>
           <span>Região de preço</span><b>${o.regiao === "SP" ? "SP" : "fora de SP"}</b>
+          <span>Equipamentos</span><b>${esc(o.equipamentos)}</b>
+          <span>Ensaios</span><b>${esc(o.ensaios)}</b>
           <span>Receita</span><b>R$ ${brl(o.receita)}</b>
           <span>Margem</span><b class="${o.margem < 0 ? "mt-ruim" : "mt-bom"}">R$ ${brl(o.margem)}</b>
         </div>
@@ -6190,6 +6240,12 @@ const ESTILO = `
 #pg-margem-teorica .mt-f{padding:7px 10px; font:inherit; font-size:12.5px;
   border:1px solid var(--bd); border-radius:8px; background:var(--card); color:inherit}
 #pg-margem-teorica .mt-busca{flex:1; min-width:200px}
+#pg-margem-teorica .mt-topo + .mt-topo{margin-top:-6px}
+#pg-margem-teorica .mt-limpa{appearance:none; cursor:pointer; font:inherit; font-size:12px;
+  padding:7px 13px; border-radius:8px; border:1px solid var(--bd);
+  background:var(--card); color:var(--ink-3)}
+#pg-margem-teorica .mt-limpa:hover{color:inherit; border-color:var(--line-strong)}
+#pg-margem-teorica .mt-eq{max-width:150px; font-size:11px; color:var(--ink-3)}
 #pg-margem-teorica .mt-kpis{display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px}
 #pg-margem-teorica .mt-kpi{flex:1; min-width:124px; background:var(--card);
   border:1px solid var(--bd); border-radius:10px; padding:10px 13px}
