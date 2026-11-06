@@ -44,6 +44,13 @@ function supa(){
       if(!r.ok) throw new Error(`Supabase ${r.status}: ${await r.text()}`);
       return r.json();
     },
+    async rpc(nome, args){
+      const r = await fetch(`${url}/rest/v1/rpc/${nome}`, {
+        method: "POST", headers: cab, body: JSON.stringify(args || {}),
+      });
+      if(!r.ok) throw new Error(`Supabase ${r.status}: ${await r.text()}`);
+      return r.json();
+    },
     async upsert(tabela, linhas, conflito){
       const r = await fetch(`${url}/rest/v1/${tabela}?on_conflict=${conflito}`, {
         method: "POST",
@@ -99,18 +106,13 @@ async function resolve(cidade){
 }
 
 /* ---------- quem ainda não tem km ----------
-   Lê as cidades da produção e tira as que já estão na tabela. Cidade
-   corrigida à mão nunca volta para a fila. */
+   O distinct é feito no banco, de propósito. Lendo a tabela de produção
+   direto, o Supabase devolveria no máximo 1.000 linhas, e nas primeiras
+   1.000 só aparecem umas 20 cidades — as demais sumiriam em silêncio.
+   A função margem_cidades_pendentes() devolve as ~150 e pronto. */
 async function pendentes(sb){
-  const [prod, jaTem] = await Promise.all([
-    sb.get("producao?select=cidade&limit=50000"),
-    sb.get("margem_distancias?select=cidade,km,origem_calculo&limit=5000"),
-  ]);
-  const resolvidas = new Set(jaTem
-    .filter(d => d.km != null || d.origem_calculo === "manual")
-    .map(d => d.cidade));
-  const todas = [...new Set(prod.map(p => (p.cidade || "").trim()).filter(Boolean))];
-  return todas.filter(c => !resolvidas.has(c));
+  const linhas = await sb.rpc("margem_cidades_pendentes");
+  return (linhas || []).map(l => (l.cidade || "").trim()).filter(Boolean);
 }
 
 export default async (req) => {
