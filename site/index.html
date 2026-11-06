@@ -5933,6 +5933,15 @@ const CUSTOS = [
   ["avulsos",                "Avulsos"],
 ];
 
+/* um trecho é uma perna da viagem: ida conta uma, volta conta outra.
+   Dizer isso no nome evita a dúvida de «e a volta?» */
+const trechos = (o, c) => {
+  const n = c === "transporte_equipamento" ? o.trechos_equipamento
+          : c === "transporte_equipe"      ? o.trechos_equipe : null;
+  if(n == null) return "";
+  return ` (${inte(n)} ${n === 1 ? "trecho" : "trechos"})`;
+};
+
 const porque = e => {
   const m = String((e && (e.message || e.details)) || e || "").toLowerCase();
   if(m.includes("does not exist") || m.includes("schema cache"))
@@ -5944,12 +5953,31 @@ const porque = e => {
   return (e && (e.message || e.details)) || String(e);
 };
 
+/* o período é resolvido NO BANCO, somando os dias do recorte.
+   Filtrar obras pelo último dia estava errado: uma obra que vai de
+   julho a setembro jogava a receita inteira dentro de setembro. */
+function limites(){
+  const a = MT.f.ano, m = MT.f.mes;
+  if(!a) return [null, null];
+  if(!m) return [`${a}-01-01`, `${a}-12-31`];
+  const ult = new Date(Number(a), Number(m), 0).getDate();
+  return [`${a}-${m}-01`, `${a}-${m}-${String(ult).padStart(2, "0")}`];
+}
+
 async function carrega(){
-  const {data, error} = await SB.from("margem_obra")
-    .select("*").order("fim", {ascending: false}).limit(2000);
+  const [de, ate] = limites();
+  const {data, error} = await SB.rpc("margem_obras", {p_de: de, p_ate: ate});
   if(error) throw error;
-  MT.obras = data || [];
+  MT.obras = (data || []).sort((a, b) => String(b.fim).localeCompare(String(a.fim)));
   MT.carregado = true;
+}
+
+/* os anos e meses não saem das obras do recorte — senão escolher um ano
+   sumiria com os outros da lista. Vêm de uma consulta leve, uma vez. */
+async function carregaPeriodos(){
+  if(MT.periodos) return;
+  const {data} = await SB.from("margem_dia").select("data").order("data").limit(50000);
+  MT.periodos = [...new Set((data || []).map(r => String(r.data).slice(0, 7)))];
 }
 
 const MESES = ["janeiro","fevereiro","março","abril","maio","junho",
@@ -5959,8 +5987,7 @@ const MESES = ["janeiro","fevereiro","março","abril","maio","junho",
    mostra só o que sobra depois dos OUTROS filtros */
 function passa(o, ignora){
   const f = MT.f;
-  if(ignora !== "ano"     && f.ano     && (o.fim || "").slice(0,4) !== f.ano) return false;
-  if(ignora !== "mes"     && f.mes     && (o.fim || "").slice(5,7) !== f.mes) return false;
+  /* ano e mês não entram aqui: o banco já devolveu só os dias do recorte */
   if(ignora !== "cliente" && f.cliente && o.cliente !== f.cliente) return false;
   if(ignora !== "equip"   && f.equip
      && !(o.equipamentos || "").split(", ").includes(f.equip)) return false;
@@ -5971,9 +5998,16 @@ function passa(o, ignora){
 
 function opcoes(campo){
   const s = new Set();
+  if(campo === "ano"){
+    (MT.periodos || []).forEach(p => s.add(p.slice(0, 4)));
+    return [...s].sort().reverse();
+  }
+  if(campo === "mes"){
+    (MT.periodos || []).filter(p => !MT.f.ano || p.slice(0,4) === MT.f.ano)
+      .forEach(p => s.add(p.slice(5, 7)));
+    return [...s].sort();
+  }
   MT.obras.filter(o => passa(o, campo)).forEach(o => {
-    if(campo === "ano")     { const a = (o.fim || "").slice(0,4); if(a) s.add(a); }
-    if(campo === "mes")     { const m = (o.fim || "").slice(5,7); if(m) s.add(m); }
     if(campo === "cliente") { if(o.cliente) s.add(o.cliente); }
     if(campo === "equip")   { (o.equipamentos || "").split(", ").forEach(x => x && s.add(x)); }
     if(campo === "ensaio")  { (o.ensaios || "").split(", ").forEach(x => x && s.add(x)); }
@@ -6057,20 +6091,32 @@ function tela(){
       </div>
     </div>`;
   pg.querySelectorAll(".mt-f").forEach(c => {
-    c.oninput = () => {
+    c.oninput = async () => {
+      const antes = MT.f.ano + "|" + MT.f.mes;
       ["ano","mes","cliente","equip","ensaio","so","ordem","busca"]
         .forEach(k => { const e = el("mt-" + k); if(e) MT.f[k] = e.value; });
       MT.aberta = null;
+      if(MT.f.ano + "|" + MT.f.mes !== antes) await recarrega();
       pintaFiltros(); pinta();
     };
   });
-  el("mt-limpa").onclick = () => {
+  el("mt-limpa").onclick = async () => {
     MT.f = {ano:"", mes:"", cliente:"", equip:"", ensaio:"",
             so:"todas", ordem:"margem", busca:""};
     MT.aberta = null;
     ["so","ordem","busca"].forEach(k => { const e = el("mt-"+k); if(e) e.value = MT.f[k]; });
+    await recarrega();
     pintaFiltros(); pinta();
   };
+
+async function recarrega(){
+  const alvo = el("mt-tabela");
+  if(alvo) alvo.innerHTML = `<p class="mt-vazio">Somando o período…</p>`;
+  MT.detalhe = {};
+  try{ await carrega(); }
+  catch(e){ if(alvo) alvo.innerHTML =
+    `<p class="mt-vazio">Não consegui calcular: ${esc(porque(e))}.</p>`; }
+}
 }
 
 function pintaFiltros(){
@@ -6107,7 +6153,10 @@ function pinta(){
                  + `<div style="font-size:11.5px;color:var(--ink-3)">${s || ""}</div></div>`;
   const moeda = v => `<span class="pre">R$</span>${brl0(v)}`;
   el("mt-kpis").innerHTML =
-      cart("Receita", moeda(rec), `${inte(l.length)} obra(s) no recorte`)
+      cart("Receita", moeda(rec),
+           `${inte(l.length)} obra(s) · ${MT.f.ano
+             ? (MT.f.mes ? (MESES[Number(MT.f.mes)-1] + " de " + MT.f.ano) : "ano de " + MT.f.ano)
+             : "todo o histórico"}`)
     + cart("Custo teórico", moeda(cus),
            rec ? `${(100 * cus / rec).toFixed(1)}% da receita` : "sem receita no recorte")
     + cart("Margem", `<span class="${mar < 0 ? "mt-ruim" : "mt-bom"}">${moeda(mar)}</span>`,
@@ -6171,7 +6220,8 @@ function linha(o){
 }
 
 function detalhe(o){
-  const itens = CUSTOS.map(([c, nome]) => [nome, Number(o[c]) || 0]).filter(x => x[1] !== 0);
+  const itens = CUSTOS.map(([c, nome]) => [nome + trechos(o, c), Number(o[c]) || 0])
+                      .filter(x => x[1] !== 0);
   const total = itens.reduce((a, x) => a + x[1], 0) || 1;
   const d = MT.detalhe[o.obra];
   return `<tr class="mt-det"><td colspan="11">
@@ -6196,13 +6246,26 @@ function detalhe(o){
           <span>Período</span><b>${dia(o.inicio)} a ${dia(o.fim)}</b>
           <span>Dias de equipamento</span><b>${inte(o.dias_equipamento)}</b>
           <span>Dias corridos com produção</span><b>${inte(o.dias_corridos)}</b>
-          <span>Distância</span><b>${o.km == null ? "não calculada" : inte(o.km) + " km"}</b>
+          <span>Distância</span><b>${o.km == null ? "não calculada"
+            : brl(o.km) + " km por trecho"}</b>
+          <span>Trechos percorridos</span><b>${
+            o.km == null ? "—"
+            : `equipe ${inte(o.trechos_equipe)}` +
+              (o.trechos_equipamento ? ` · equipamento ${inte(o.trechos_equipamento)}` : "")
+          }</b>
           <span>Região de preço</span><b>${o.regiao === "SP" ? "SP" : "fora de SP"}</b>
           <span>Equipamentos</span><b>${esc(o.equipamentos)}</b>
           <span>Ensaios</span><b>${esc(o.ensaios)}</b>
           <span>Receita</span><b>R$ ${brl(o.receita)}</b>
           <span>Margem</span><b class="${o.margem < 0 ? "mt-ruim" : "mt-bom"}">R$ ${brl(o.margem)}</b>
         </div>
+        <p class="mt-nota">
+          A distância é de <b>um trecho</b>, de Contagem até a obra. Ida e volta são
+          dois trechos, e é assim que entram no custo. Quando a obra cobrou transporte,
+          cada dia cobrado vale um trecho; quando não cobrou, valem o primeiro e o
+          último dia.${(o.equipamentos || "").split(", ").length && !o.trechos_equipamento
+            ? " Os equipamentos desta obra viajam no porta-malas, então só o carro da equipe tem custo de transporte." : ""}
+        </p>
         ${o.sem_km || o.sem_preco_transporte ? `<p class="mt-aviso-mini">
           ${o.sem_km ? "Sem a distância da cidade, o transporte entrou como zero. " : ""}
           ${o.sem_preco_transporte ? "Algum equipamento desta obra não tem custo por km definido. " : ""}
@@ -6238,10 +6301,14 @@ async function abre(obra){
   pinta();
   if(!MT.aberta || MT.detalhe[obra]) return;
   try{
-    const {data, error} = await SB.from("margem_obra_dia")
+    const [de, ate] = limites();
+    let q = SB.from("margem_obra_dia")
       .select("data,maquina,pessoas,producao_un,receita_total,diesel,manutencao,"
             + "alimentacao,estadia,mao_de_obra,gratificacao")
       .eq("obra", obra).order("data").limit(500);
+    if(de)  q = q.gte("data", de);
+    if(ate) q = q.lte("data", ate);
+    const {data, error} = await q;
     if(error) throw error;
     MT.detalhe[obra] = data || [];
   }catch(e){ MT.detalhe[obra] = []; }
@@ -6254,7 +6321,7 @@ async function abrir(){
   tela();
   if(MT.carregado){ pinta(); return; }
   el("mt-tabela").innerHTML = `<p class="mt-vazio">Calculando as margens…</p>`;
-  try{ await carrega(); pintaFiltros(); pinta(); }
+  try{ await carregaPeriodos(); await carrega(); pintaFiltros(); pinta(); }
   catch(e){ el("mt-tabela").innerHTML =
     `<p class="mt-vazio">Não consegui calcular: ${esc(porque(e))}.</p>`; }
 }
@@ -6328,6 +6395,8 @@ const ESTILO = `
   font-size:12px; align-items:baseline}
 #pg-margem-teorica .mt-pares > span{color:var(--ink-3)}
 #pg-margem-teorica .mt-pares > b{font-variant-numeric:tabular-nums}
+#pg-margem-teorica .mt-nota{font-size:11.5px; color:var(--ink-3); margin:12px 0 0;
+  line-height:1.55}
 #pg-margem-teorica .mt-aviso-mini{font-size:11.5px; color:#8a6412; margin:12px 0 0; line-height:1.55}
 #pg-margem-teorica .mt-dias{margin-top:18px}
 #pg-margem-teorica .mt-tbd{font-size:11.5px; min-width:760px}
